@@ -10,7 +10,7 @@ RUN mkdir /packages
 WORKDIR /packages
 RUN npm install @openzeppelin/contracts @xaya/eth-account-registry
 
-FROM python:3
+FROM python:3-slim
 
 RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir jsonrpclib-pelix web3
