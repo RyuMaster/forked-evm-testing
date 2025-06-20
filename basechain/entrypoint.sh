@@ -11,4 +11,5 @@ anvil \
   --fork-url "${ENDPOINT}" \
   ${HEIGHT_ARG} \
   --host "0.0.0.0" \
+  --auto-impersonate \
   --no-mining
