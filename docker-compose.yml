@@ -26,6 +26,7 @@ services:
       "--xayax_block_range=90",
       "--nolisten_locally",
       "--alsologtostderr",
+      "--max_reorg_depth=1000"
     ]
     stop_grace_period: 1s
     restart: on-failure
