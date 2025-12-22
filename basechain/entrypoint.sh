@@ -12,4 +12,4 @@ anvil \
   ${HEIGHT_ARG} \
   --host "0.0.0.0" \
   --auto-impersonate \
-  --no-mining
+  --block-time 5
