@@ -233,7 +233,8 @@ def validatecharacterstate (characterId, action):
   try:
     # Get characters from GSP
     chars = gsp.getcharacters ()
-    charData = chars.get ("characters", [])
+    # GSP returns characters under "data" key, not "characters"
+    charData = chars.get ("data", [])
 
     # Find the character
     character = None
