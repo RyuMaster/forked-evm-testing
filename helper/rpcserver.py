@@ -250,7 +250,7 @@ def validatecharacterstate (characterId, action):
     result["character"] = {
       "id": character.get ("id"),
       "owner": character.get ("owner"),
-      "pos": character.get ("pos"),
+      "position": character.get ("position"),
       "speed": character.get ("speed", 0),
       "inbuilding": character.get ("inbuilding"),
       "faction": character.get ("faction"),
