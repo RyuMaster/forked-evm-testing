@@ -288,6 +288,122 @@ def validatecharacterstate (characterId, action):
   return result
 
 
+def sendadmin (cmd):
+  """
+  Sends an admin (god mode) command to the GSP via the g/tn name.
+  Admin commands are sent as moves on the game admin namespace (g/).
+
+  The command should be a god mode object like:
+    {"god": {"teleport": [{"id": 1, "pos": {"x": 5, "y": -42}}]}}
+    {"god": {"giftcoins": {"player_name": 1000}}}
+    {"god": {"drop": [{"pos": {"x": 100, "y": 200}, "items": {"foo": 10}}]}}
+    {"god": {"sethp": {"c": [{"id": 1, "a": 10}]}}}
+    {"god": {"build": [{"type": "huesli", "o": "domob", "rot": 0, "c": {"x": 10, "y": 20}}]}}
+
+  Returns a dict with:
+  - success: True/False
+  - txHash: transaction hash if successful
+  - error: error message if failed
+  """
+
+  result = {
+    "success": False,
+    "command": cmd,
+  }
+
+  try:
+    # Admin commands go via g/tn (game admin namespace with game ID)
+    ns = "g"
+    name = "tn"
+
+    # Wrap in {"cmd": ...} structure expected by GSP
+    mv = {"cmd": cmd}
+
+    if type (mv) != str:
+      mv = json.dumps (mv, separators=(",", ":"))
+
+    result["moveData"] = mv[:500]
+
+    # Check if g/tn exists, if not register it
+    if not accounts.functions.exists (ns, name).call ():
+      # Register g/tn with a throwaway address we can impersonate
+      adminAddr = "0x0000000000000000000000000000000000000001"
+      ensuregas (adminAddr)
+
+      # Need WCHI for registration - try multiple approaches
+      requiredWchi = 10**18  # 1 WCHI should be enough
+      currentWchi = wchi.functions.balanceOf (adminAddr).call ()
+      if currentWchi < requiredWchi:
+        wchiObtained = False
+
+        # Approach 1: Try anvil_deal cheatcode (sets ERC20 balance directly)
+        try:
+          eth.anvil_deal (wchi.address, adminAddr, requiredWchi)
+          mineblock ()
+          wchiObtained = True
+        except Exception as e1:
+          result["debug_deal_error"] = str(e1)
+
+        # Approach 2: Transfer from the WCHI contract itself (if it holds tokens)
+        if not wchiObtained:
+          try:
+            contractBalance = wchi.functions.balanceOf (wchi.address).call ()
+            if contractBalance >= requiredWchi:
+              ensuregas (wchi.address)
+              wchi.functions.transfer (adminAddr, requiredWchi) \
+                  .transact ({"from": wchi.address})
+              mineblock ()
+              wchiObtained = True
+          except Exception as e2:
+            result["debug_contract_transfer_error"] = str(e2)
+
+        # Approach 3: Find any WCHI holder with sufficient balance
+        if not wchiObtained:
+          try:
+            # Check XayaAccounts contract as potential holder
+            accountsBalance = wchi.functions.balanceOf (accounts.address).call ()
+            if accountsBalance >= requiredWchi:
+              ensuregas (accounts.address)
+              wchi.functions.transfer (adminAddr, requiredWchi) \
+                  .transact ({"from": accounts.address})
+              mineblock ()
+              wchiObtained = True
+          except Exception as e3:
+            result["debug_accounts_transfer_error"] = str(e3)
+
+        if not wchiObtained:
+          result["warning"] = "Could not obtain WCHI for admin address registration"
+
+      wchi.functions.approve (accounts.address, 2**256-1) \
+          .transact ({"from": adminAddr})
+      mineblock ()
+      accounts.functions.register (ns, name).transact ({"from": adminAddr})
+      mineblock ()
+      result["registered"] = True
+
+    owner, tokenId = getNameOwner (ns, name)
+    result["owner"] = owner
+    result["tokenId"] = tokenId
+
+    ensuregas (owner)
+
+    tx = accounts.functions.move (ns, name, mv, 2**256-1, 0, "0x" + "00" * 20) \
+        .transact ({"from": owner})
+
+    result["txHash"] = tx.hex () if hasattr (tx, 'hex') else str (tx)
+
+    mineblock ()
+
+    result["success"] = True
+    result["message"] = "Admin command sent successfully"
+
+  except Exception as e:
+    result["error"] = str (e)
+    result["errorType"] = type (e).__name__
+
+  return result
+
+
 def syncgsp ():
   """
   Waits for the GSP to be synced up-to-date to the latest block of the
@@ -350,6 +466,7 @@ srv.register_function (transfertoken)
 
 srv.register_function (getname)
 srv.register_function (sendmove)
+srv.register_function (sendadmin)
 srv.register_function (validatecharacterstate)
 
 srv.register_function (syncgsp)
