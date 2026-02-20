@@ -1,27 +1,14 @@
-# Runs a forked blockchain, connected Xaya X and an image with a utility
-# JSON-RPC server (e.g. for mining blocks on demand and sending moves
-# with impersonated addresses).
+# Runs Xaya X connected to a real Polygon (or other EVM) network,
+# along with a GSP exposed via reverse proxy.
 
 services:
 
-  basechain:
-    build:
-      context: ./basechain
-    environment:
-      ENDPOINT:  ${BLOCKCHAIN_ENDPOINT}
-      FORK_BLOCK_NUMBER: ${FORK_BLOCK_NUMBER}
-    stop_grace_period: 1s
-
   xayax:
     image: xaya/xayax
-    environment:
-      # We don't really need reorgs at all in the test environment,
-      # so can set this to something very low.
-      MAX_REORG_DEPTH: 1
     command: [
       "eth",
-      "--eth_rpc_url=http://nginx/chain",
-      "--eth_ws_url=http://nginx/chain",
+      "--eth_rpc_url=${BLOCKCHAIN_RPC_URL}",
+      "--eth_ws_url=${BLOCKCHAIN_WS_URL}",
       "--accounts_contract=${ACCOUNTS_CONTRACT}",
       "--xayax_block_range=90",
       "--nolisten_locally",
@@ -30,9 +17,6 @@ services:
     ]
     stop_grace_period: 1s
     restart: on-failure
-    depends_on:
-      healthcheck_chain:
-        condition: service_healthy
 
   gsp:
     image: ${GSP_IMAGE}
@@ -51,32 +35,12 @@ services:
       healthcheck_xayax:
         condition: service_healthy
 
-  helper:
-    build:
-      context: ./helper
-    environment:
-      ACCOUNTS_CONTRACT: ${ACCOUNTS_CONTRACT}
-    stop_grace_period: 1s
-    depends_on:
-      healthcheck_chain:
-        condition: service_healthy
-
   nginx:
     build:
       context: ./nginx
     ports:
       - "8100:80"
     stop_grace_period: 1s
-
-  healthcheck_chain:
-    build:
-      context: ./healthcheck
-    stop_grace_period: 1s
-    healthcheck:
-      test: ["CMD", "/usr/local/bin/basechain.py"]
-      interval: 1s
-      timeout: 5s
-      retries: 10
 
   healthcheck_xayax:
     build:
