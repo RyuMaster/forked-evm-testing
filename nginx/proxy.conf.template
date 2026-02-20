@@ -10,6 +10,16 @@ server {
 
   resolver 127.0.0.11 valid=1s;
 
+  location /chain {
+    proxy_pass ${BLOCKCHAIN_RPC_URL}/;
+    proxy_http_version 1.1;
+    proxy_set_header Content-Type application/json;
+    proxy_set_header Authorization ${BLOCKCHAIN_AUTH_HEADER};
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_ssl_server_name on;
+  }
+
   location /gsp {
     set $upstream http://gsp:8600/;
 

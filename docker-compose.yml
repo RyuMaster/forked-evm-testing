@@ -7,8 +7,8 @@ services:
     image: xaya/xayax
     command: [
       "eth",
-      "--eth_rpc_url=${BLOCKCHAIN_RPC_URL}",
-      "--eth_ws_url=${BLOCKCHAIN_WS_URL}",
+      "--eth_rpc_url=http://nginx/chain",
+      "--eth_ws_url=http://nginx/chain",
       "--accounts_contract=${ACCOUNTS_CONTRACT}",
       "--xayax_block_range=90",
       "--nolisten_locally",
@@ -21,10 +21,8 @@ services:
   gsp:
     image: ${GSP_IMAGE}
     command: [
-      "smcd",
       "--xaya_rpc_url=http://xayax:8000",
       "--xaya_rpc_protocol=2",
-      "--game_rpc_port=8600",
       "--nogame_rpc_listen_locally",
       "--xaya_connection_check_ms=10000",
       "--xaya_zmq_staleness_ms=10000",
@@ -38,6 +36,9 @@ services:
   nginx:
     build:
       context: ./nginx
+    environment:
+      BLOCKCHAIN_RPC_URL: ${BLOCKCHAIN_RPC_URL}
+      BLOCKCHAIN_AUTH_HEADER: ${BLOCKCHAIN_AUTH_HEADER}
     ports:
       - "8100:80"
     stop_grace_period: 1s
