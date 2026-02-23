@@ -32,17 +32,16 @@ services:
                echo 'game.db already exists, skipping';
              fi"
 
-  mysql:
+  mariadb:
     image: mariadb:11
     environment:
-      MARIADB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-gsparchival}
+      MARIADB_ROOT_PASSWORD: gsparchival
       MARIADB_DATABASE: archival
     volumes:
-      - ${ARCHIVAL_SQL_PATH:-./archival.sql}:/docker-entrypoint-initdb.d/archival.sql:ro
-      - mysql_data:/var/lib/mysql
+      - mariadb_data:/var/lib/mysql
     stop_grace_period: 5s
     healthcheck:
-      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost"]
+      test: ["CMD", "mariadb-admin", "ping", "-h", "127.0.0.1", "-u", "root", "-pgsparchival"]
       interval: 2s
       timeout: 5s
       retries: 30
@@ -56,7 +55,7 @@ services:
       "--xaya_connection_check_ms=10000",
       "--xaya_zmq_staleness_ms=10000",
       "--extfile_endpoint=http://soccerverse-download-site.s3-website.eu-west-2.amazonaws.com",
-      "--archival_db=mysql://root:${MYSQL_ROOT_PASSWORD:-gsparchival}@mysql/archival",
+      "--archival_db=mysql://root:gsparchival@mariadb:3306/archival",
       "--alsologtostderr",
     ]
     volumes:
@@ -67,7 +66,7 @@ services:
         condition: service_completed_successfully
       healthcheck_xayax:
         condition: service_healthy
-      mysql:
+      mariadb:
         condition: service_healthy
 
   nginx:
@@ -92,4 +91,4 @@ services:
 
 volumes:
   gspdata:
-  mysql_data:
+  mariadb_data:
