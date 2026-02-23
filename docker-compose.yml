@@ -33,16 +33,16 @@ services:
              fi"
 
   mysql:
-    image: mysql:8
+    image: mariadb:11
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-gsparchival}
-      MYSQL_DATABASE: archival
+      MARIADB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-gsparchival}
+      MARIADB_DATABASE: archival
     volumes:
       - ${ARCHIVAL_SQL_PATH:-./archival.sql}:/docker-entrypoint-initdb.d/archival.sql:ro
       - mysql_data:/var/lib/mysql
     stop_grace_period: 5s
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost"]
       interval: 2s
       timeout: 5s
       retries: 30
