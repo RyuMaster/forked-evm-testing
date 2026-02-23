@@ -1,5 +1,5 @@
 # Runs Xaya X connected to a real Polygon (or other EVM) network,
-# along with a GSP exposed via reverse proxy.
+# along with a GSP and archival MySQL database, exposed via reverse proxy.
 
 services:
 
@@ -18,6 +18,35 @@ services:
     stop_grace_period: 1s
     restart: on-failure
 
+  gsp-init:
+    image: alpine
+    volumes:
+      - gspdata:/xayagame
+      - ${STORAGE_SQLITE_PATH:-./storage.sqlite}:/seed/storage.sqlite:ro
+    command: >
+      sh -c "if [ ! -f /xayagame/sv/polygon/game.db ]; then
+               mkdir -p /xayagame/sv/polygon &&
+               cp /seed/storage.sqlite /xayagame/sv/polygon/game.db &&
+               echo 'Seeded game.db';
+             else
+               echo 'game.db already exists, skipping';
+             fi"
+
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-gsparchival}
+      MYSQL_DATABASE: archival
+    volumes:
+      - ${ARCHIVAL_SQL_PATH:-./archival.sql}:/docker-entrypoint-initdb.d/archival.sql:ro
+      - mysql_data:/var/lib/mysql
+    stop_grace_period: 5s
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
   gsp:
     image: ${GSP_IMAGE}
     command: [
@@ -26,11 +55,19 @@ services:
       "--nogame_rpc_listen_locally",
       "--xaya_connection_check_ms=10000",
       "--xaya_zmq_staleness_ms=10000",
+      "--extfile_endpoint=http://soccerverse-download-site.s3-website.eu-west-2.amazonaws.com",
+      "--archival_db=mysql://root:${MYSQL_ROOT_PASSWORD:-gsparchival}@mysql/archival",
       "--alsologtostderr",
     ]
+    volumes:
+      - gspdata:/xayagame
     stop_grace_period: 1s
     depends_on:
+      gsp-init:
+        condition: service_completed_successfully
       healthcheck_xayax:
+        condition: service_healthy
+      mysql:
         condition: service_healthy
 
   nginx:
@@ -52,3 +89,7 @@ services:
       interval: 1s
       timeout: 5s
       retries: 10
+
+volumes:
+  gspdata:
+  mysql_data:
