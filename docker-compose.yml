@@ -43,9 +43,10 @@ services:
     stop_grace_period: 5s
     healthcheck:
       test: ["CMD", "mariadb-admin", "ping", "-h", "127.0.0.1", "-u", "root", "-pgsparchival"]
-      interval: 2s
+      interval: 5s
       timeout: 5s
-      retries: 30
+      start_period: 30m
+      retries: 3
 
   gsp:
     image: ${GSP_IMAGE}
