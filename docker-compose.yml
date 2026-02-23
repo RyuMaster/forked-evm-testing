@@ -24,12 +24,12 @@ services:
       - gspdata:/xayagame
       - ${STORAGE_SQLITE_PATH:-./storage.sqlite}:/seed/storage.sqlite:ro
     command: >
-      sh -c "if [ ! -f /xayagame/sv/polygon/game.db ]; then
+      sh -c "if [ ! -f /xayagame/sv/polygon/storage.sqlite ]; then
                mkdir -p /xayagame/sv/polygon &&
-               cp /seed/storage.sqlite /xayagame/sv/polygon/game.db &&
-               echo 'Seeded game.db';
+               cp /seed/storage.sqlite /xayagame/sv/polygon/storage.sqlite &&
+               echo 'Seeded storage.sqlite';
              else
-               echo 'game.db already exists, skipping';
+               echo 'storage.sqlite already exists, skipping';
              fi"
 
   mariadb:
