@@ -23,14 +23,32 @@ services:
     volumes:
       - gspdata:/xayagame
       - ${STORAGE_SQLITE_PATH:-./storage.sqlite}:/seed/storage.sqlite:ro
-    command: >
-      sh -c "if [ ! -f /xayagame/sv/polygon/storage.sqlite ]; then
-               mkdir -p /xayagame/sv/polygon &&
-               cp /seed/storage.sqlite /xayagame/sv/polygon/storage.sqlite &&
-               echo 'Seeded storage.sqlite';
-             else
-               echo 'storage.sqlite already exists, skipping';
-             fi"
+    command:
+      - sh
+      - -c
+      - |
+        if [ ! -f /xayagame/sv/polygon/storage.sqlite ]; then
+          mkdir -p /xayagame/sv/polygon
+          cp /seed/storage.sqlite /xayagame/sv/polygon/storage.sqlite
+          echo 'Seeded storage.sqlite'
+        else
+          echo 'storage.sqlite already exists, skipping seed'
+        fi
+
+        echo 'Running schema migrations...'
+        apk add --no-cache sqlite > /dev/null 2>&1
+        DB=/xayagame/sv/polygon/storage.sqlite
+
+        sqlite3 "$$DB" "ALTER TABLE league_player ADD COLUMN clean_sheets INTEGER NOT NULL DEFAULT 0;" 2>/dev/null || true
+        sqlite3 "$$DB" "ALTER TABLE cup_player ADD COLUMN clean_sheets INTEGER NOT NULL DEFAULT 0;" 2>/dev/null || true
+        sqlite3 "$$DB" "ALTER TABLE league_player ADD COLUMN minutes_played INTEGER NOT NULL DEFAULT 0;" 2>/dev/null || true
+        sqlite3 "$$DB" "ALTER TABLE cup_player ADD COLUMN minutes_played INTEGER NOT NULL DEFAULT 0;" 2>/dev/null || true
+        sqlite3 "$$DB" "ALTER TABLE leagues ADD COLUMN prize_ratio INTEGER NOT NULL DEFAULT 0;" 2>/dev/null || true
+        sqlite3 "$$DB" "ALTER TABLE players ADD COLUMN last_transfer INTEGER NOT NULL DEFAULT 0;" 2>/dev/null || true
+        sqlite3 "$$DB" "CREATE TABLE IF NOT EXISTS transfer_counts (from_club INTEGER NOT NULL, to_club INTEGER NOT NULL, transfers INTEGER NOT NULL, PRIMARY KEY (from_club, to_club));" 2>/dev/null || true
+        sqlite3 "$$DB" "CREATE INDEX IF NOT EXISTS idx_transfer_counts_to ON transfer_counts (to_club, from_club);" 2>/dev/null || true
+
+        echo 'Schema migrations complete'
 
   mariadb:
     image: mariadb:11
