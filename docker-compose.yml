@@ -118,15 +118,13 @@ services:
     entrypoint: ["/bin/bash", "-c", "sed -i \"s/utf8mb4_0900_bin/utf8mb4_bin/g\" db_manager.py && python main.py"]
     environment:
       SOURCE_DB_HOST: mariadb
-      SOURCE_DB_PORT: "3306"
       SOURCE_DB_USER: root
-      SOURCE_DB_PASS: gsparchival
-      SOURCE_DB: archival
+      SOURCE_DB_PASSWORD: gsparchival
+      SOURCE_DB_NAME: archival
       DEST_DB_HOST: mariadb
-      DEST_DB_PORT: "3306"
       DEST_DB_USER: root
-      DEST_DB_PASS: gsparchival
-      DEST_DB: datacentre
+      DEST_DB_PASSWORD: gsparchival
+      DEST_DB_NAME: datacentre
       SQLITE_PATH: /xayagame/sv/polygon/storage.sqlite
       GAME_ID: sv
     volumes:
@@ -164,6 +162,8 @@ services:
     depends_on:
       mariadb:
         condition: service_healthy
+      gsp-init:
+        condition: service_completed_successfully
     restart: on-failure
 
 volumes:
