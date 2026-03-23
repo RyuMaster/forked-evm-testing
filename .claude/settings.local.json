@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "WebSearch",
+      "WebFetch(domain:docs.soccerverse.com)",
+      "Bash(find /c/WorkFiles/lapsed_users/tests -type f -name *.py)",
+      "WebFetch(domain:data.soccerverse.com)",
+      "Read(//c/WorkFiles/**)",
+      "Bash(grep -r \"FROM \" /c/WorkFiles/datacentre_updater/updaters/*.py)",
+      "Bash(grep -rh \"FROM \" /c/WorkFiles/datacentre_updater/updaters/*.py)",
+      "Bash(grep -oE \"FROM\\\\s+\\\\`?[a-z_0-9]+\\\\`?\")",
+      "Bash(grep -r \"execute_query\\(''''source''''\" /c/WorkFiles/datacentre_updater/updaters/*.py -A 5)",
+      "Bash(grep -rh \"execute_query\\\\|cursor.execute\" /c/WorkFiles/datacentre_updater/updaters/*.py)",
+      "Bash(done)"
+    ]
+  }
+}

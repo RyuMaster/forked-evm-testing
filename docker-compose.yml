@@ -56,8 +56,12 @@ services:
       MARIADB_ROOT_PASSWORD: gsparchival
       MARIADB_DATABASE: archival
     volumes:
+      - ./db-init/init-databases.sh:/docker-entrypoint-initdb.d/00-init-databases.sh:ro
       - ${ARCHIVAL_SQL_PATH:-./archival.sql}:/docker-entrypoint-initdb.d/archival.sql:ro
+      - ${USERCONFIG_SQL_PATH:-./userconfig.sql}:/seed/userconfig.sql:ro
       - mariadb_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
     stop_grace_period: 5s
     healthcheck:
       test: ["CMD", "mariadb-admin", "ping", "-h", "127.0.0.1", "-u", "root", "-pgsparchival"]
@@ -108,6 +112,63 @@ services:
       interval: 1s
       timeout: 5s
       retries: 10
+
+  datacentre-updater:
+    build:
+      context: ../datacentre_updater
+      dockerfile: docker/Dockerfile
+    entrypoint: ["/bin/bash", "-c", "sed -i \"s/utf8mb4_0900_bin/utf8mb4_bin/g\" db_manager.py && python main.py"]
+    environment:
+      SOURCE_DB_HOST: mariadb
+      SOURCE_DB_PORT: "3306"
+      SOURCE_DB_USER: root
+      SOURCE_DB_PASS: gsparchival
+      SOURCE_DB: archival
+      DEST_DB_HOST: mariadb
+      DEST_DB_PORT: "3306"
+      DEST_DB_USER: root
+      DEST_DB_PASS: gsparchival
+      DEST_DB: datacentre
+      SQLITE_PATH: /xayagame/sv/polygon/storage.sqlite
+      GAME_ID: sv
+    volumes:
+      - gspdata:/xayagame:ro
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      gsp-init:
+        condition: service_completed_successfully
+    restart: on-failure
+
+  datacentre-api:
+    build:
+      context: ../datacentre_api
+      dockerfile: docker/Dockerfile
+    environment:
+      MYSQL_HOST: mariadb
+      MYSQL_PORT: "3306"
+      MYSQL_USER: root
+      MYSQL_PASSWORD: gsparchival
+      MYSQL_DB: datacentre
+      MYSQL_ARCHIVAL_HOST: mariadb
+      MYSQL_ARCHIVAL_PORT: "3306"
+      MYSQL_ARCHIVAL_USER: root
+      MYSQL_ARCHIVAL_PASSWORD: gsparchival
+      MYSQL_ARCHIVAL_DB: archival
+      USERCONFIG_HOST: mariadb
+      USERCONFIG_PORT: "3306"
+      USERCONFIG_USER: root
+      USERCONFIG_PASS: gsparchival
+      USERCONFIG_DB: userconfig
+      SQLITE_DB_PATH: /xayagame/sv/polygon/storage.sqlite
+      ROOT_PATH: /api
+      GAME_ID: sv
+    volumes:
+      - gspdata:/xayagame:ro
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    restart: on-failure
 
 volumes:
   gspdata:
