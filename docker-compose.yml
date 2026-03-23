@@ -51,12 +51,12 @@ services:
         echo 'Schema migrations complete'
 
   mariadb:
-    image: mariadb:11
+    build:
+      context: ./db-init
     environment:
       MARIADB_ROOT_PASSWORD: gsparchival
       MARIADB_DATABASE: archival
     volumes:
-      - ./db-init/init-databases.sh:/docker-entrypoint-initdb.d/00-init-databases.sh:ro
       - ${ARCHIVAL_SQL_PATH:-./archival.sql}:/docker-entrypoint-initdb.d/archival.sql:ro
       - ${USERCONFIG_SQL_PATH:-./userconfig.sql}:/seed/userconfig.sql:ro
       - mariadb_data:/var/lib/mysql
