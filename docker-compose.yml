@@ -115,7 +115,7 @@ services:
 
   datacentre-updater:
     build:
-      context: ../datacentre_updater
+      context: ${DATACENTRE_UPDATER_PATH:-../datacentre_updater}
       dockerfile: docker/Dockerfile
     entrypoint: ["/bin/bash", "-c", "sed -i \"s/utf8mb4_0900_bin/utf8mb4_bin/g\" db_manager.py && python main.py"]
     environment:
@@ -142,7 +142,7 @@ services:
 
   datacentre-api:
     build:
-      context: ../datacentre_api
+      context: ${DATACENTRE_API_PATH:-../datacentre_api}
       dockerfile: docker/Dockerfile
     environment:
       MYSQL_HOST: mariadb
