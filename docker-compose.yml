@@ -61,7 +61,7 @@ services:
       - ${USERCONFIG_SQL_PATH:-./userconfig.sql}:/seed/userconfig.sql:ro
       - mariadb_data:/var/lib/mysql
     ports:
-      - "3306:3306"
+      - "${MARIADB_PORT:-3307}:3306"
     stop_grace_period: 5s
     healthcheck:
       test: ["CMD", "mariadb-admin", "ping", "-h", "127.0.0.1", "-u", "root", "-pgsparchival"]
