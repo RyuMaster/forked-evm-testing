@@ -104,6 +104,7 @@ Optional:
 
 - `GAME_ID` (default `sv`)
 - `STORAGE_SQLITE_PATH`, `ARCHIVAL_SQL_PATH`, `USERCONFIG_SQL_PATH` — first-boot seed inputs
+- `DEMOCRIT_ABI_PATH`, `VAULTMANAGER_ABI_PATH` — host paths to real democrit ABI JSONs (forge build artefacts). When unset, in-repo placeholders are used and `subgraph-deploy` skips democrit. See `subgraphs/democrit/POPULATE_ABIS.md`.
 - `MARIADB_PORT` (default `3307`) — host-side port
 
 All other configuration (Redis URL, Graph Postgres credentials, BigQuery local DB, dump folder paths, subgraph URLs, etc.) is hardcoded in `docker-compose.yml` because those are stack-internal Docker hostnames.

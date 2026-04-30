@@ -2,7 +2,7 @@
 
 The two ABI files in `abis/` (`Democrit.json`, `VaultManager.json`) are placeholders. They contain the marker key `_DATACENTRE_STACK_PLACEHOLDER` so the `subgraph-deploy` container can detect them and skip democrit gracefully (the stack still deploys; the democrit subgraph just isn't indexed).
 
-To bring democrit online, generate the real ABIs once:
+To bring democrit online, supply real ABIs at runtime via two env vars — same pattern as `ARCHIVAL_SQL_PATH` / `USERCONFIG_SQL_PATH` / `STORAGE_SQLITE_PATH`. The compose file bind-mounts whatever paths you provide on top of the in-repo placeholders.
 
 ## One-time setup
 
@@ -31,34 +31,33 @@ To bring democrit online, generate the real ABIs once:
    forge build
    ```
 
-   This produces `out/Democrit.sol/Democrit.json` and `out/VaultManager.sol/VaultManager.json`, among other artefacts.
+   This produces `out/Democrit.sol/Democrit.json` and `out/VaultManager.sol/VaultManager.json` among other artefacts.
 
-3. **Replace the placeholders**
-
-   From the root of this stack repo:
+3. **Set the env vars in `.env`**
 
    ```bash
-   cp /path/to/democrit-evm/out/Democrit.sol/Democrit.json    subgraphs/democrit/abis/Democrit.json
-   cp /path/to/democrit-evm/out/VaultManager.sol/VaultManager.json subgraphs/democrit/abis/VaultManager.json
+   DEMOCRIT_ABI_PATH=/path/to/democrit-evm/out/Democrit.sol/Democrit.json
+   VAULTMANAGER_ABI_PATH=/path/to/democrit-evm/out/VaultManager.sol/VaultManager.json
    ```
 
-4. **Commit**
+   Paths are absolute (or relative to the docker-compose.yml directory). Both env vars must be set; if only one is, the other stays as a placeholder, deploy.sh detects the marker, and democrit is skipped.
 
-   ```bash
-   git add subgraphs/democrit/abis/Democrit.json subgraphs/democrit/abis/VaultManager.json
-   git commit -m "Populate democrit ABIs from forge build"
-   ```
+4. **Re-deploy** — `subgraph-deploy` picks up the new ABIs on the next `docker compose up`. No image rebuild required, no commit to this repo required. The placeholder files in `subgraphs/democrit/abis/` stay untouched.
 
-5. **Re-deploy** — `subgraph-deploy` will pick up the new ABIs on the next `docker compose up`. No image rebuild required.
+## Verifying the override worked
 
-## Verifying the placeholders are gone
+After `docker compose up -d` boots far enough for `subgraph-deploy` to run:
 
 ```bash
-grep -L _DATACENTRE_STACK_PLACEHOLDER subgraphs/democrit/abis/*.json
+docker compose logs subgraph-deploy | grep democrit
 ```
 
-Both files should be listed (i.e. the marker is absent from both). If either still contains the marker, the deploy script will skip democrit.
+If you see `WARNING: democrit has placeholder ABIs — skipping deploy.`, the env vars aren't taking effect — check that the paths exist on the host and the JSON files don't contain `_DATACENTRE_STACK_PLACEHOLDER`.
+
+If you see `Recorded GRAPH_SUBGRAPH_DEMOCRIT=Qm...`, democrit is live.
 
 ## Why this layout?
 
-The democrit subgraph at `subgraphs/democrit/subgraph.yaml` references its ABIs via relative paths (`./abis/Democrit.json`). Upstream, those paths were symlinks into a sibling Foundry project's `out/` directory, which only existed if `forge build` had been run. Vendoring symlinks across machines is fragile, so the stack instead inlines the ABI files directly. This keeps the vendored snapshot hermetic — once populated, no external repo or build step is needed at deploy time.
+The democrit subgraph at `subgraphs/democrit/subgraph.yaml` references its ABIs via relative paths (`./abis/Democrit.json`). Upstream, those paths were symlinks into a sibling Foundry project's `out/` directory, which only existed if `forge build` had been run. Vendoring symlinks across machines is fragile.
+
+Instead, the stack ships placeholder ABIs in this folder so `git clone` always produces a deployable tree. The compose file then layers operator-supplied real ABIs on top via two env-var-driven bind mounts. The pattern matches how other generated artefacts (`archival.sql`, `userconfig.sql`, `storage.sqlite`) are supplied at deploy time. No commit to this repo is needed when ABIs change — just regenerate them and update the paths.

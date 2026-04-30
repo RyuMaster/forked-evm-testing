@@ -173,6 +173,11 @@ services:
       - ./subgraphs/stats:/subgraphs/stats:ro
       - ./subgraphs/sv:/subgraphs/sv:ro
       - ./subgraphs/democrit:/subgraphs/democrit:ro
+      # Operator-supplied real ABIs override the in-repo placeholders. When
+      # both env vars point at real forge artefacts, the placeholder marker
+      # is gone and democrit deploys; otherwise deploy.sh skips it.
+      - ${DEMOCRIT_ABI_PATH:-./subgraphs/democrit/abis/Democrit.json}:/subgraphs/democrit/abis/Democrit.json:ro
+      - ${VAULTMANAGER_ABI_PATH:-./subgraphs/democrit/abis/VaultManager.json}:/subgraphs/democrit/abis/VaultManager.json:ro
       - graph_hashes_shared:/shared
     depends_on:
       graph-node:
