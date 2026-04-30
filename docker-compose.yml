@@ -115,6 +115,22 @@ services:
       timeout: 3s
       retries: 5
 
+  graph-postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: graph-node
+      POSTGRES_PASSWORD: graph-node
+      POSTGRES_DB: graph-node
+      POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
+    volumes:
+      - graph_postgres_data:/var/lib/postgresql/data
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U graph-node -d graph-node"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   healthcheck_xayax:
     build:
       context: ./healthcheck
@@ -204,6 +220,8 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
+      graph-postgres:
+        condition: service_healthy
     restart: on-failure
 
 volumes:
@@ -211,3 +229,4 @@ volumes:
   mariadb_data:
   datadumps:
   redis_data:
+  graph_postgres_data:
