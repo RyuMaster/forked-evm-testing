@@ -103,6 +103,18 @@ services:
       - "8100:80"
     stop_grace_period: 1s
 
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    stop_grace_period: 5s
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   healthcheck_xayax:
     build:
       context: ./healthcheck
@@ -190,9 +202,12 @@ services:
         condition: service_healthy
       gsp-init:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     restart: on-failure
 
 volumes:
   gspdata:
   mariadb_data:
   datadumps:
+  redis_data:
