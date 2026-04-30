@@ -161,7 +161,7 @@ services:
       ipfs:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8030/graphql -H 'content-type: application/json' --post-data '{\"query\":\"{indexingStatuses{subgraph}}\"}' >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8020' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 30
