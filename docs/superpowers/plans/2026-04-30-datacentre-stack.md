@@ -12,6 +12,18 @@
 
 ---
 
+## Implementation status (2026-04-30)
+
+**All 15 tasks executed. Mid-implementation pivot:**
+
+Tasks 4, 5, and 11 originally instructed `build: ./datacentre_updater`, `build: ./datacentre_api`, and `build: ./subgraph-deploy` to compile images locally on the deploy host. After implementation, the user clarified that their existing Portainer-from-git workflow expects pre-built images supplied via env vars (`DATACENTRE_UPDATER_IMAGE`, `DATACENTRE_API_IMAGE`, `SUBGRAPH_DEPLOY_IMAGE`). All three were reverted to `image: ${...}` in commit `818c721`. The vendored sources remain in the repo as the source of truth for image builds; the operator builds and pushes images separately (see `CLAUDE.md` "Building images" for commands).
+
+The runtime sed-hack entrypoint on `datacentre-updater` was also restored to support pre-built images that don't include the build-time collation patch from Task 2.
+
+Task body text below for Tasks 4/5/11 is preserved as-implemented-then-reverted; **for the final compose state**, refer to `docker-compose.yml` (HEAD) and `CLAUDE.md`. If you re-run this plan against a fresh worktree, apply the `image: ${...}` pattern from the start.
+
+---
+
 ## File Map
 
 **New (vendored, copied wholesale):**
@@ -1046,6 +1058,8 @@ git commit -m "Wire graph_hashes_shared into datacentre-api entrypoint"
 **Files:**
 - Modify: `.env.example`
 
+The stack uses pre-built images for `datacentre-api`, `datacentre-updater`, and `subgraph-deploy`. Operator builds those images from the vendored sources (or uses CI), pushes to a registry the deploy host can pull from, then sets the three `*_IMAGE` env vars in `.env`.
+
 - [ ] **Step 1: Replace the file**
 
 Open `.env.example` and replace its entire contents with:
@@ -1069,6 +1083,19 @@ ACCOUNTS_CONTRACT="0x8C12253F71091b9582908C8a44F78870Ec6F304F"
 # be passed to it.
 GSP_IMAGE=""
 
+# Pre-built image for datacentre-api. Build from ./datacentre_api and push to
+# a registry the deploy host can pull from. See CLAUDE.md "Building images"
+# for the build commands.
+DATACENTRE_API_IMAGE=""
+
+# Pre-built image for datacentre-updater. Build from ./datacentre_updater
+# (Dockerfile already includes the utf8mb4 collation patch).
+DATACENTRE_UPDATER_IMAGE=""
+
+# Pre-built image for subgraph-deploy (one-shot graph-cli deployer).
+# Build from ./subgraph-deploy.
+SUBGRAPH_DEPLOY_IMAGE=""
+
 # Game ID to use for activity and user tracking (sv for production, svt for test).
 GAME_ID="sv"
 
@@ -1085,22 +1112,19 @@ USERCONFIG_SQL_PATH="./userconfig.sql"
 MARIADB_PORT="3307"
 ```
 
-The two old `DATACENTRE_*_IMAGE` variables are removed — those services are now built from local sources.
-
 - [ ] **Step 2: Verify**
 
 ```bash
-diff .env.example .env 2>/dev/null || echo "Operator must update .env"
 docker compose config --quiet
 ```
 
-Expected: `docker compose config --quiet` exits 0 (compose file is valid).
+Expected: exits 0 (compose file is valid). Skip if Docker isn't available — Task 15 will catch any remaining issues.
 
 - [ ] **Step 3: Commit**
 
 ```bash
 git add .env.example
-git commit -m "Drop image vars, add GAME_ID to .env.example"
+git commit -m "Add SUBGRAPH_DEPLOY_IMAGE + GAME_ID to .env.example"
 ```
 
 ---
