@@ -1,0 +1,152 @@
+# An address that holds or did hold names.
+type Address @entity (immutable: true) {
+  # The ID is the address itself as bytes.
+  id: Bytes!
+
+  # All names held at the moment by the address.
+  names: [Name!]! @derivedFrom (field: "owner")
+}
+
+# A transaction in the underlying blockchain.
+type Transaction @entity (immutable: true) {
+  # The ID is the transaction ID as bytes.
+  id: Bytes!
+
+  # Block height and timestamp of the transaction.
+  height: BigInt!
+  timestamp: BigInt!
+}
+
+# A namespace that has been seen on the blockchain.
+type Namespace @entity (immutable: true) {
+  # The ID is the namespace string as Bytes.
+  id: Bytes!
+  # The namespace as string.
+  ns: String!
+
+  names: [Name!]! @derivedFrom (field: "ns")
+}
+
+# A game ID that has been seen on the blockchain.
+type Game @entity (immutable: true) {
+  # The ID is the game ID as Bytes.
+  id: Bytes!
+  # The game ID as string.
+  game: String!
+
+  moves: [GameMove!]! @derivedFrom (field: "game")
+}
+
+# A Xaya name (of any namespace) that has been seen on the blockchain.
+type Name @entity (immutable: false) {
+  # The ID is the token ID encoded as Bytes.
+  id: Bytes!
+
+  # The namespace this name belongs to.
+  ns: Namespace!
+  # The account name as string.
+  name: String!
+
+  # Address currently holding the name.
+  owner: Address!
+
+  registration: Registration! @derivedFrom (field: "name")
+  moves: [Move!]! @derivedFrom (field: "name")
+  profileData: [ProfileData!]! @derivedFrom (field: "account")
+}
+
+# A single Registration event detected.
+type Registration @entity (immutable: true) {
+  # The ID is generated from txhash and log index and is just a unique value.
+  id: Bytes!
+
+  # The transaction that did the registration.
+  tx: Transaction!
+
+  # The name that was registered.
+  name: Name!
+}
+
+# A single Move that was done, independent of the data stored.
+type Move @entity (immutable: true) {
+  # The ID is generated from txhash and log index and is just a unique value.
+  id: Bytes!
+
+  # The transaction that did the move.
+  tx: Transaction!
+
+  # The name that sent the move.
+  name: Name!
+
+  # The move data.
+  move: String!
+
+  # Optionally a payment associated to this move.
+  payment: Payment @derivedFrom (field: "move")
+
+  # Game moves sent with this.
+  games: [GameMove!]! @derivedFrom (field: "move")
+}
+
+# A single WCHI payment attached to a move.
+type Payment @entity (immutable: true) {
+  # The ID is generated from txhash and log index and is just a unique value.
+  id: Bytes!
+
+  # The move that sent this payment.
+  move: Move!
+
+  # The receiver address as bytes.
+  receiver: Bytes!
+
+  # Amount in WCHI sats.
+  amount: BigInt!
+}
+
+# A move for a particular game (i.e. p/ name, and contains that key
+# inside the "g" key in its JSON).
+type GameMove @entity (immutable: true) {
+  # The ID is generated from txhash, log index and game ID and is just a
+  # unique value.
+  id: Bytes!
+
+  # The overall move that contains this game move.
+  move: Move!
+
+  # We replicate the transaction reference here from move, so that
+  # we can sort by transaction timestamp.  GraphQL on The Graph supports
+  # sorting by nested fields only one level deep.
+  tx: Transaction!
+
+  # The Game instance this is for.
+  game: Game!
+
+  # The game-specific part of the move JSON.
+  gamemove: String!
+}
+
+################################################################################
+# Public profile data
+
+# A bit of data stored in an account's public profile.  Profile data is
+# a key/value storage, with string keys and values.  For each account, there
+# is a separate key/value store for data placed by the account itself and by
+# admin accounts (such as hiding profile pictures).  Both of them are stored
+# as entities of this type.
+type ProfileData @entity (immutable: false) {
+  # The ID is the concatenation of the account ID (token ID of the p/ name),
+  # a single byte 0/1 for admin false/true, and the key string as bytes.
+  id: Bytes!
+
+  # The account this corresponds to (which will always be a p/ name).
+  account: Name!
+
+  # Whether or not this is an admin entry.
+  admin: Boolean!
+
+  # The key as string.
+  key: String!
+
+  # The associated value.
+  value: String!
+}

@@ -1,0 +1,112 @@
+import pytest
+from unittest.mock import patch
+
+pytestmark = pytest.mark.asyncio
+
+class TestClubsEndpoints:
+    @pytest.mark.asyncio
+    async def test_get_clubs(self, client, seed_test_data):
+        """Test basic /clubs endpoint."""
+        response = client.get("/clubs")
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Check response structure
+        assert "page" in data
+        assert "per_page" in data
+        assert "total" in data
+        assert "total_pages" in data
+        assert "items" in data
+        
+        # Check club data
+        items = data["items"]
+        assert len(items) == 1  # We seeded 1 test club
+        
+        # Check club properties
+        club = items[0]
+        assert club["club_id"] == 50
+        assert club["country_id"] == "ENG"
+        assert club["manager_name"] == "snailbrain"
+        assert club["value"] == 75000000
+        assert club["balance"] == 5000000
+        assert club["rating_start"] == 70
+        
+        # Check market data from mock Redis
+        assert club["current_price"] == 10000
+        assert club["last_price"] == 9500
+        assert club["volume_1_day"] == 5000000
+        assert club["volume_7_day"] == 20000000
+    
+    @pytest.mark.asyncio
+    async def test_get_clubs_with_filter(self, client, seed_test_data):
+        """Test /clubs endpoint with filters."""
+        response = client.get("/clubs", params={"club_id": 50})
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Should match our test club
+        assert data["total"] == 1
+        assert len(data["items"]) == 1
+        assert data["items"][0]["club_id"] == 50
+    
+    @pytest.mark.asyncio
+    async def test_get_clubs_with_owner_filter(self, client, seed_test_data):
+        """Test /clubs endpoint with owner filter."""
+        response = client.get("/clubs", params={"owned": "snailbrain"})
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Should match our test club as it's managed by snailbrain
+        assert data["total"] == 1
+        assert len(data["items"]) == 1
+        assert data["items"][0]["club_id"] == 50
+        assert data["items"][0]["manager_name"] == "snailbrain"
+    
+    @pytest.mark.asyncio
+    async def test_get_clubs_with_value_filter(self, client, seed_test_data):
+        """Test /clubs endpoint with value range filter."""
+        response = client.get("/clubs", params={
+            "value_min": 50000000,
+            "value_max": 100000000
+        })
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Should match our test club which has value 75000000
+        assert data["total"] == 1
+        assert len(data["items"]) == 1
+        assert data["items"][0]["club_id"] == 50
+        assert data["items"][0]["value"] == 75000000
+    
+    @pytest.mark.asyncio
+    async def test_get_clubs_detailed(self, client, seed_test_data):
+        """Test /clubs/detailed endpoint."""
+        response = client.get("/clubs/detailed")
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Check club data with details
+        items = data["items"]
+        assert len(items) == 1
+        
+        # Check detailed properties
+        club = items[0]
+        assert club["club_id"] == 50
+        assert club["country_id"] == "ENG"
+        assert club["manager_name"] == "snailbrain"
+        assert club["value"] == 75000000
+        assert club["balance"] == 5000000
+        assert club["division_start"] == 2
+        assert club["fans_start"] == 2000
+        assert club["fans_current"] == 2500
+        assert club["stadium_size_start"] == 20000
+        assert club["stadium_size_current"] == 22000
+        assert club["form"] == "WDLWW"
+        assert club["manager_voted"] == 1
+        assert club["transfers_in"] == 3
+        assert club["transfers_out"] == 2

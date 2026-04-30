@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "@graphprotocol/graph-ts": "0.37.0"
+  },
+  "devDependencies": {
+    "matchstick-as": "^0.6.0",
+    "@graphprotocol/graph-cli": "^0.98.1"
+  }
+}

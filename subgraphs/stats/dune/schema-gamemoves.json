@@ -1,0 +1,10 @@
+{
+  "namespace": "xaya",
+  "table_name": "game_moves",
+  "description": "A move in a particular game done on Xaya",
+  "is_private": false,
+  "schema": [
+    {"name": "move_id", "type": "varchar"},
+    {"name": "game", "type": "varchar"}
+  ]
+}

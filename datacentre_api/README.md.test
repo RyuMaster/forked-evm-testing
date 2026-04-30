@@ -1,0 +1,29 @@
+# Testing the Datacentre API
+
+## Test Strategy
+
+We're using a simplified testing approach with the following strategy:
+
+1. **Complete Isolation**: Our tests run completely isolated from any real database or Redis connections
+2. **Mock API**: We use a simplistic mock API that mimics the real API without the complexity
+3. **Gradual Integration**: Once basic tests pass, we'll add more real code with proper mocking
+
+## Running Tests
+
+```bash
+./tests/run_tests.sh
+```
+
+This script:
+- Sets up mock environment variables
+- Runs tests with a timeout to prevent hanging
+- Saves detailed logs for debugging
+
+## Adding More Tests
+
+When adding new tests:
+1. Start with the basic functionality
+2. Ensure proper mocking of all dependencies
+3. Test one endpoint at a time
+
+If tests hang or fail, check the log files in `tests/logs/` for details.
