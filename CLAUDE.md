@@ -4,60 +4,139 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Docker Compose-based testing infrastructure for Xaya blockchain gaming applications. Provides a forked EVM chain (Polygon by default via Foundry's Anvil), a connected Xaya X instance, a Game State Provider (GSP), and a Python JSON-RPC helper server — all behind an Nginx reverse proxy on `localhost:8100`.
+Docker Compose stack that runs a Soccerverse Game State Provider (GSP) plus its supporting services (Xaya X, MariaDB archival store, Redis cache, Graph Protocol indexing pipeline, datacentre updater + API) against a remote EVM RPC endpoint, all behind an Nginx reverse proxy on `localhost:8100`. Designed for Portainer-from-git deploys with operator-supplied pre-built images for the heavyweight services.
+
+The legacy local Anvil fork and the Python helper RPC server are no longer wired into compose; the `basechain/` and `helper/` directories remain in the tree but are inert. `/chain` is now a pass-through to a real RPC endpoint.
 
 ## Common Commands
 
 ```bash
-# Start the full environment (requires .env with BLOCKCHAIN_ENDPOINT and GSP_IMAGE set)
-docker compose up --build
+# Start the full environment (requires .env populated — see Configuration)
+docker compose up -d
 
-# Start in background
-docker compose up --build -d
-
-# Tear down
+# Tear down (keeps volumes)
 docker compose down
 
-# Rebuild a specific service
-docker compose build helper
+# Tear down + wipe all volumes (destructive — wipes mariadb_data, graph_postgres_data, etc.)
+docker compose down --volumes
 
-# Run the integration test (requires running environment + Polygon mainnet fork)
-ACCOUNTS_CONTRACT=0x8C12253F71091b9582908C8a44F78870Ec6F304F python test/helper-server.py
+# Rebuild one of the locally-built helper services (nginx, mariadb, healthcheck_xayax)
+docker compose build nginx
 ```
-
-There is no linter, type checker, or automated test runner — the test is a single Python script (`test/helper-server.py`) run manually against a live Docker Compose environment.
 
 ## Architecture
 
-**Service dependency chain:** basechain → healthcheck_chain → xayax → healthcheck_xayax → gsp. The helper service only depends on healthcheck_chain.
+### Services (docker-compose.yml)
 
-**Exposed endpoints (all via Nginx on port 8100):**
-- `/chain` → Anvil RPC (port 8545), supports JSON-RPC and WebSocket
-- `/gsp` → Game State Provider (port 8600)
-- `/helper` → Python helper server (port 8000)
+- **`nginx`** — reverse proxy, the only host-published service (port 8100). Renders `proxy.conf.template` via `envsubst`. Routes:
+  - `/chain` → `${BLOCKCHAIN_RPC_URL}` (auth header injected, WebSocket-capable)
+  - `/gsp` → `gsp:8600`
+  - `/api` → `datacentre-api:8000`
+- **`xayax`** — `xaya/xayax` (eth mode), connects via `http://nginx/chain`.
+- **`gsp-init`** — one-shot Alpine. Seeds `${STORAGE_SQLITE_PATH}` into the `gspdata` volume and applies idempotent Soccerverse SQLite migrations.
+- **`mariadb`** — built from `db-init/`. Creates `archival`, `datacentre`, `userconfig`, `lapsed_users`, `bigquery_local` databases on first start; imports `archival.sql` and `userconfig.sql`. Healthcheck `start_period` is 30 minutes for the slow archival import.
+- **`gsp`** — `${GSP_IMAGE}` (Soccerverse GSP). Uses MariaDB `archival`, talks to `xayax`.
+- **`redis`** — `redis:7-alpine`, used as cache by `datacentre-api`.
+- **`graph-postgres`** — `postgres:14`, locale C, UTF8. Storage backend for `graph-node`.
+- **`ipfs`** — `ipfs/kubo`, manifest store for `graph-node`.
+- **`graph-node`** — `graphprotocol/graph-node`. Indexes `matic` via `http://nginx/chain`. Internal-only.
+- **`subgraph-deploy`** — `${SUBGRAPH_DEPLOY_IMAGE}`, one-shot. For each of `./subgraphs/{stats,sv,democrit}`: skips if any ABI contains the `_DATACENTRE_STACK_PLACEHOLDER` marker (see `subgraphs/democrit/POPULATE_ABIS.md`); otherwise copies the subgraph to writable scratch, runs `npm install` + `graph codegen` + `graph build` + `graph create` + `graph deploy`, then queries `graph-postgres` for the resulting IPFS hash and writes it to `/shared/graph_hashes.env` in the `graph_hashes_shared` volume.
+- **`datacentre-updater`** — `${DATACENTRE_UPDATER_IMAGE}`. Reads SQLite + MariaDB; writes MariaDB (`datacentre`, `bigquery_local`) and the shared `datadumps` volume. Compose entrypoint applies the `utf8mb4_0900_bin` → `utf8mb4_bin` collation patch at runtime via `sed -i db_manager.py` (also applied at build time inside the vendored `Dockerfile`, so the patch is no-op-safe if your image already includes it).
+- **`datacentre-api`** — `${DATACENTRE_API_IMAGE}`. FastAPI behind Gunicorn. Entrypoint sources `/shared/graph_hashes.env` (auto-exported via `set -a`) before starting Python so `lookup_subgraph_schemas()` resolves locally-deployed subgraph hashes against `graph-postgres`.
+- **`healthcheck_xayax`** — sidecar, checks `xayax:8000` reachable.
 
-**Internal networking:** Services reference each other by Docker hostname through Nginx (e.g., `http://nginx/chain`), not localhost. Only Nginx is port-mapped to the host.
+### Service dependency chain
 
-### Key Components
+```
+ipfs, graph-postgres, redis, mariadb, nginx, xayax — all start independently
+graph-node             ← depends on ipfs, graph-postgres healthy
+subgraph-deploy        ← depends on graph-node healthy (one-shot)
+healthcheck_xayax      ← checks xayax
+gsp-init               ← one-shot
+gsp                    ← gsp-init complete + healthcheck_xayax healthy + mariadb healthy
+datacentre-updater     ← mariadb + gsp-init + subgraph-deploy
+datacentre-api         ← mariadb + redis + graph-postgres + gsp-init + subgraph-deploy
+```
 
-- **`basechain/`** — Anvil fork with `--auto-impersonate` and 5-second block time. Fork URL and block number are configured via env vars.
-- **`helper/rpcserver.py`** — The main development surface. Python JSON-RPC server (jsonrpclib-pelix + web3.py) providing utility methods for testing: mining blocks, setting balances, transferring ERC-20 tokens, registering/transferring Xaya names, sending moves, admin/god-mode commands, and GSP sync.
-- **`healthcheck/`** — Python scripts that verify basechain and Xaya X readiness via JSON-RPC calls. Used as Docker health checks to gate service startup.
-- **`nginx/proxy.conf`** — Reverse proxy with lazy upstream resolution (services can start in any order). Sets `Content-Type: application/json` and supports WebSocket upgrade on `/chain`.
-- **`test/helper-server.py`** — Integration test script asserting helper server functionality against a Polygon mainnet fork. Uses randomly generated addresses and assumes `p/domob` name exists.
+### Vendored sources (built into images by the operator, not at deploy time)
 
-## Code Patterns
+```
+forked-evm-testing/
+├── datacentre_api/        snapshot of upstream FastAPI service
+├── datacentre_updater/    snapshot of upstream updater (with build-time collation patch)
+├── subgraphs/
+│   ├── stats/             xaya-stats subgraph
+│   ├── sv/                sv-subgraph
+│   └── democrit/          democrit-sv subgraph (placeholder ABIs — see POPULATE_ABIS.md)
+└── subgraph-deploy/       Dockerfile + deploy.sh for the one-shot deployer
+```
 
-- **Account impersonation:** Anvil's auto-impersonate is enabled globally. The helper server freely transacts as any address without private keys.
-- **RPC method return convention:** Complex helper methods (`getname`, `sendmove`, `sendadmin`, `syncgsp`) return dicts with `success: True/False`, an `error` field on failure, and operation-specific fields.
-- **ABI loading:** ABIs are loaded from JSON files in `test/abi/` (for tests) and copied into the helper container at `/abi/` (for the server). The JSON files have an `"abi"` key containing the ABI array.
-- **WCHI token:** Resolved at startup from the XayaAccounts contract (`wchiToken()` call). Required for name registration; the `sendadmin` method has a multi-approach fallback to obtain WCHI (anvil_deal → contract transfer → accounts transfer).
-- **Xaya name system:** Names have namespaces (`p/` for player, `g/` for game). Moves are sent via the `XayaAccounts.move()` function. Admin commands use the `g/tn` name.
+Re-syncing from upstream (`C:\WorkFiles\datacentre_api`, `C:\WorkFiles\stats-subgraph`, etc.) is a manual `cp -r`. The vendored copies are the source of truth for the images the operator builds.
+
+### Internal networking
+
+Services reference each other by Docker hostname (`http://nginx/chain`, `http://graph-node:8000/subgraphs/name/sv`, `mysql://...@mariadb:3306/...`, `redis://redis:6379`, `graph-postgres:5432`, `ipfs:5001`). Only `nginx` and (optionally) `mariadb` (host port `${MARIADB_PORT}`, default 3307) are reachable from the host.
+
+### Boot timing
+
+Cold boot from `docker compose up -d`:
+- ~30s — graph-node ready
+- ~1-2m — `subgraph-deploy` finishes and writes `graph_hashes.env`
+- ~2-30m — `mariadb` healthy (first-boot import depends on dump size)
+- ~2m+ after the above — `datacentre-api` starts; MariaDB+SQLite endpoints work fully
+- hours-days — graph-node indexing catches up; subgraph-backed endpoints (`/leaderboards`, `/user_activity`, `/shop`, parts of `/market`) progressively populate
+
+Indexing volume can be substantial — graph-node will issue many `eth_getLogs`/`eth_call` requests to `BLOCKCHAIN_RPC_URL` during cold sync.
 
 ## Configuration
 
-Copy `.env.example` to `.env` and fill in:
-- `BLOCKCHAIN_ENDPOINT` — Archival node RPC URL (e.g., Alchemy/Infura for Polygon)
-- `FORK_BLOCK_NUMBER` — `"latest"` or a specific block height
-- `ACCOUNTS_CONTRACT` — XayaAccounts address (default: Polygon mainnet)
-- `GSP_IMAGE` — Docker image for the game's GSP
+Copy `.env.example` to `.env`. Required:
+
+- `BLOCKCHAIN_RPC_URL` — full RPC URL (used by both nginx and graph-node)
+- `BLOCKCHAIN_AUTH_HEADER` — `Authorization` header value (empty if endpoint needs none)
+- `ACCOUNTS_CONTRACT` — XayaAccounts address
+- `GSP_IMAGE` — Soccerverse GSP image
+- `DATACENTRE_API_IMAGE` — pre-built image for the API
+- `DATACENTRE_UPDATER_IMAGE` — pre-built image for the updater
+- `SUBGRAPH_DEPLOY_IMAGE` — pre-built image for the one-shot subgraph deployer
+
+Optional:
+
+- `GAME_ID` (default `sv`)
+- `STORAGE_SQLITE_PATH`, `ARCHIVAL_SQL_PATH`, `USERCONFIG_SQL_PATH` — first-boot seed inputs
+- `MARIADB_PORT` (default `3307`) — host-side port
+
+All other configuration (Redis URL, Graph Postgres credentials, BigQuery local DB, dump folder paths, subgraph URLs, etc.) is hardcoded in `docker-compose.yml` because those are stack-internal Docker hostnames.
+
+## Building images
+
+The three pre-built images come from the vendored sources. Build from the repo root, tag for your registry, then push:
+
+```bash
+# datacentre-api
+docker build -t YOUR_REGISTRY/datacentre-api:VERSION \
+  -f datacentre_api/docker/Dockerfile datacentre_api
+docker push YOUR_REGISTRY/datacentre-api:VERSION
+
+# datacentre-updater
+docker build -t YOUR_REGISTRY/datacentre-updater:VERSION \
+  -f datacentre_updater/docker/Dockerfile datacentre_updater
+docker push YOUR_REGISTRY/datacentre-updater:VERSION
+
+# subgraph-deploy
+docker build -t YOUR_REGISTRY/subgraph-deploy:VERSION subgraph-deploy
+docker push YOUR_REGISTRY/subgraph-deploy:VERSION
+```
+
+Then set the matching `*_IMAGE` env vars in `.env`. Re-running `docker compose up -d` pulls the new images.
+
+## Operational notes
+
+- **First start is slow.** `mariadb` archival import + graph-node indexing both take time. Healthcheck `start_period` for mariadb is 30 minutes; for graph-node it's just service-up (indexing happens in the background).
+- **`gsp-init` schema migrations are idempotent** (`2>/dev/null || true`). Add new ALTERs in the same pattern.
+- **`subgraph-deploy` is idempotent.** Re-running on unchanged sources is fast — graph-cli detects unchanged manifests. The deploy script overwrites `/shared/graph_hashes.env` each run.
+- **democrit subgraph ships with placeholder ABIs.** Real ABIs require `forge build` of the upstream `democrit-evm` repo — see `subgraphs/democrit/POPULATE_ABIS.md`. Until populated, `subgraph-deploy` skips democrit (logs a warning) and the stack still boots cleanly; only the trade-history subgraph endpoints used by `datacentre-updater` (via `SVC_POLYGON_SUBGRAPH_URL`) are unavailable.
+- **Collation patch:** `datacentre-updater`'s compose entrypoint runs `sed -i 's/utf8mb4_0900_bin/utf8mb4_bin/g' db_manager.py` at every container start (idempotent — once patched, sed matches nothing). The vendored `datacentre_updater/docker/Dockerfile` also applies the patch at build time, so anyone re-rolling the image from source gets it baked in.
+- **Editing `proxy.conf.template`:** the file is rendered through `envsubst` with the explicit allowlist `$BLOCKCHAIN_RPC_URL $BLOCKCHAIN_AUTH_HEADER` in `nginx/entrypoint.sh`. Any new env var referenced in the template must be added to that allowlist.
+- **Stack memory footprint:** ~6-8 GB RAM during indexing. Postgres + graph-node + mariadb dominate.
+- **Legacy directories**: `basechain/` and `helper/` remain in the tree from the original Anvil-fork design but are no longer wired into compose. Treat as inert unless re-introduced.

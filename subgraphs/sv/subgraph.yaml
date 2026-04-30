@@ -1,0 +1,146 @@
+specVersion: 0.0.8
+schema:
+  file: schema.graphql
+
+dataSources:
+  - kind: ethereum/contract
+    name: ReferralTracker
+    network: matic
+    source:
+      address: "0x329612BB11Eea1Ea5065993DC32b41C86D6068c2"
+      abi: ReferralTracker
+      startBlock: 62773319
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - Referral
+        - Referrer
+        - ReferrerTotal
+      abis:
+        - name: ReferralTracker
+          file: ./abis/ReferralTracker.json
+      blockHandlers:
+        - handler: createPackSaleTiers
+          filter:
+            kind: once
+      eventHandlers:
+        - event: ReferrerUpdated(string,string,uint256)
+          handler: handleReferrerUpdated
+      file: src/referralTracker.ts
+
+  - kind: ethereum/contract
+    name: ClubMinter
+    network: matic
+    source:
+      address: "0xeEE0d855112b71Dc68d72053594Af03F92C586Ae"
+      abi: ClubMinter
+      startBlock: 66056325
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - SaleClub
+      abis:
+        - name: ClubMinter
+          file: ./abis/ClubMinter.json
+        - name: SwappingPackSale
+          file: abis/SwappingPackSale.json
+      blockHandlers:
+        - handler: createPackSaleTiers
+          filter:
+            kind: once
+      eventHandlers:
+        - event: SharesMinted(indexed uint256,uint256,string,uint256,uint256)
+          handler: handleSharesMinted
+      file: src/saleTiers.ts
+
+  - kind: ethereum/contract
+    name: UniswapV2Factory
+    network: matic
+    source:
+      address: "0x9e5A52f57b3038F1B8EeE45F28b3C1967e22799C"
+      abi: UniswapV2Factory
+      # We want to start this at "launch time", same as the ClubMinter
+      # handlers.  However, using the exact same block can cause issues
+      # with graph-node, and thus we set this to one block earlier.
+      startBlock: 66056324
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - Token
+        - TokenPair
+        - PriceObservation
+      abis:
+        - name: IERC20Metadata
+          file: ./abis/IERC20Metadata.json
+        - name: UniswapV2Factory
+          file: ./abis/UniswapV2Factory.json
+        - name: UniswapV2Pair
+          file: abis/UniswapV2Pair.json
+      blockHandlers:
+        - handler: maybeObservePrices
+          filter:
+            kind: polling
+            every: 100
+      file: src/uniswapPrices.ts
+
+templates:
+  - kind: ethereum/contract
+    name: PackSaleForReferrals
+    network: matic
+    source:
+      abi: SwappingPackSale
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - ReferrerBonus
+        - ReferrerTotal
+      abis:
+        - name: SwappingPackSale
+          file: abis/SwappingPackSale.json
+      eventHandlers:
+        - event: ReferralBonusGiven(string,string,uint256,uint256,uint256,uint256)
+          handler: handleReferralBonus
+      file: src/referralTracker.ts
+  - kind: ethereum/contract
+    name: PackSaleForShop
+    network: matic
+    source:
+      abi: SwappingPackSale
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - PacksBought
+        - PriceStep
+        - SaleClub
+        - SaleTier
+      abis:
+        - name: SwappingPackSale
+          file: abis/SwappingPackSale.json
+      eventHandlers:
+        - event: ClubAdded(indexed uint256)
+          handler: handleClubAdded
+        - event: ClubRemoved(indexed uint256)
+          handler: handleClubRemoved
+        - event: ClubSalePaused(indexed uint256)
+          handler: handleClubSalePaused
+        - event: Paused(address)
+          handler: handleSalePaused
+        - event: Unpaused(address)
+          handler: handleSaleUnpaused
+        - event: PricingUpdated((uint256,uint256)[])
+          handler: handlePricingUpdated
+        - event: SeedUpdated(bytes32)
+          handler: handleSeedUpdated
+        - event: PacksBought(indexed address,string,indexed uint256,uint256,uint256)
+          handler: handlePacksBought
+      file: src/saleTiers.ts

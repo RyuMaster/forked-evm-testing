@@ -103,6 +103,82 @@ services:
       - "8100:80"
     stop_grace_period: 1s
 
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    stop_grace_period: 5s
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  graph-postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: graph-node
+      POSTGRES_PASSWORD: graph-node
+      POSTGRES_DB: graph-node
+      POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
+    volumes:
+      - graph_postgres_data:/var/lib/postgresql/data
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U graph-node -d graph-node"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ipfs:
+    image: ipfs/kubo:latest
+    volumes:
+      - ipfs_data:/data/ipfs
+    stop_grace_period: 10s
+    healthcheck:
+      test: ["CMD", "ipfs", "id"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  graph-node:
+    image: graphprotocol/graph-node:latest
+    environment:
+      postgres_host: graph-postgres
+      postgres_user: graph-node
+      postgres_pass: graph-node
+      postgres_db: graph-node
+      ipfs: "ipfs:5001"
+      ethereum: "matic:http://nginx/chain"
+      GRAPH_LOG: info
+      RUST_LOG: info
+    stop_grace_period: 10s
+    depends_on:
+      graph-postgres:
+        condition: service_healthy
+      ipfs:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8030/graphql -H 'content-type: application/json' --post-data '{\"query\":\"{indexingStatuses{subgraph}}\"}' >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  subgraph-deploy:
+    image: ${SUBGRAPH_DEPLOY_IMAGE}
+    volumes:
+      - ./subgraphs/stats:/subgraphs/stats:ro
+      - ./subgraphs/sv:/subgraphs/sv:ro
+      - ./subgraphs/democrit:/subgraphs/democrit:ro
+      - graph_hashes_shared:/shared
+    depends_on:
+      graph-node:
+        condition: service_healthy
+    restart: "no"
+
   healthcheck_xayax:
     build:
       context: ./healthcheck
@@ -125,19 +201,32 @@ services:
       DEST_DB_USER: root
       DEST_DB_PASSWORD: gsparchival
       DEST_DB_NAME: datacentre
+      BIGQUERY_DB_HOST: mariadb
+      BIGQUERY_DB_USER: root
+      BIGQUERY_DB_PASSWORD: gsparchival
+      BIGQUERY_DB_NAME: bigquery_local
       SQLITE_PATH: /xayagame/sv/polygon/storage.sqlite
-      GAME_ID: sv
+      DATAPACK_URL: https://downloads.soccerverse.com/svpack/default.json
+      DUMP_OUTPUT_FOLDER: /dumps
+      GAME_ID: ${GAME_ID:-sv}
+      SVC_POLYGON_SUBGRAPH_URL: http://graph-node:8000/subgraphs/name/democrit
+      POLYGON_STATS_SUBGRAPH_URL: http://graph-node:8000/subgraphs/name/stats
+      SV_SUBGRAPH_URL: http://graph-node:8000/subgraphs/name/sv
     volumes:
       - gspdata:/xayagame:ro
+      - datadumps:/dumps
     depends_on:
       mariadb:
         condition: service_healthy
       gsp-init:
         condition: service_completed_successfully
+      subgraph-deploy:
+        condition: service_completed_successfully
     restart: on-failure
 
   datacentre-api:
     image: ${DATACENTRE_API_IMAGE}
+    entrypoint: ["sh", "-c", "set -a; . /shared/graph_hashes.env; set +a; exec python3 main.py"]
     environment:
       MYSQL_HOST: mariadb
       MYSQL_PORT: "3306"
@@ -156,16 +245,41 @@ services:
       USERCONFIG_DB: userconfig
       SQLITE_DB_PATH: /xayagame/sv/polygon/storage.sqlite
       ROOT_PATH: /api
-      GAME_ID: sv
+      GAME_ID: ${GAME_ID:-sv}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_DB: "0"
+      REDIS_PASSWORD: ""
+      GRAPH_POSTGRES_HOST: graph-postgres
+      GRAPH_POSTGRES_PORT: "5432"
+      GRAPH_POSTGRES_USER: graph-node
+      GRAPH_POSTGRES_PASSWORD: graph-node
+      GRAPH_POSTGRES_DB: graph-node
+      GRAPH_SUBGRAPH_SV_URL: http://graph-node:8000/subgraphs/name/sv
+      DEFAULT_PROFILE_PIC_URL: https://downloads.soccerverse.com/default_profile.jpg
+      DUMP_OUTPUT_FOLDER: /dumps
     volumes:
       - gspdata:/xayagame:ro
+      - datadumps:/dumps:ro
+      - graph_hashes_shared:/shared:ro
     depends_on:
       mariadb:
         condition: service_healthy
       gsp-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      graph-postgres:
+        condition: service_healthy
+      subgraph-deploy:
         condition: service_completed_successfully
     restart: on-failure
 
 volumes:
   gspdata:
   mariadb_data:
+  datadumps:
+  redis_data:
+  graph_postgres_data:
+  ipfs_data:
+  graph_hashes_shared:

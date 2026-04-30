@@ -9,6 +9,7 @@ mariadb -u root -p"${MARIADB_ROOT_PASSWORD}" <<-EOSQL
     CREATE DATABASE IF NOT EXISTS datacentre;
     CREATE DATABASE IF NOT EXISTS userconfig;
     CREATE DATABASE IF NOT EXISTS lapsed_users;
+    CREATE DATABASE IF NOT EXISTS bigquery_local;
 EOSQL
 
 if [ -f /seed/userconfig.sql ]; then

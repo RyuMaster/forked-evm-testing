@@ -1,0 +1,210 @@
+# GraphQL schema for all the data we collect from the Soccerverse
+# smart contracts (excluding Democrit which has its own subgraph).
+
+################################################################################
+# Referral leaderboard
+
+# A user that has referred others.
+type Referrer @entity (immutable: false) {
+  # The ID is the Xaya account name as Bytes.
+  id: Bytes!
+  account: String!
+  referrals: [Referral!]! @derivedFrom (field: "referrer")
+  bonuses: [ReferrerBonus!]! @derivedFrom (field: "referrer")
+  totals: [ReferrerTotal!]!  @derivedFrom (field: "referrer")
+  # The current (last) ReferrerTotal for this referrer.
+  currentTotal: ReferrerTotal!
+}
+
+# Each user that a referrer has referred is tracked here.
+type Referral @entity (immutable: false) {
+  # The ID is the Xaya account name as Bytes.
+  id: Bytes!
+  account: String!
+  referrer: Referrer!
+  timestamp: BigInt!
+}
+
+# A referral bonus given.
+type ReferrerBonus @entity (immutable: true) {
+  # The ID is constructed from txid and log index and just a unique ID.
+  id: Bytes!
+  referrer: Referrer!
+  referral: Referral!
+  timestamp: BigInt!
+  clubId: BigInt!
+  packsBought: BigInt!
+  usdSpent: BigInt!
+  bonusShares: BigInt!
+}
+
+# Running totals for referral stats.  Whenever they change (such as new referral
+# or referral overwritten, or bonus received), we add a new entry here with
+# updated totals.  From this, stats for some time range can be derived
+# by subtracting the totals.
+type ReferrerTotal @entity (immutable: true) {
+  # The ID is constructed from account name and a running counter for how many
+  # totals we already have for this account.
+  id: Bytes!
+  referrer: Referrer!
+  timestamp: BigInt!
+  # How many preceding totals there already are for this referrer.
+  index: BigInt!
+  referrals: BigInt!
+  bonusShares: BigInt!
+  # Total USD spent by referrals.
+  usdSpent: BigInt!
+}
+
+################################################################################
+# Shop and pack-sale stuff
+
+# A tier (individual sales contract) in the pack sale.
+type SaleTier @entity (immutable: false) {
+  # The ID is the contract address (as Bytes).
+  id: Bytes!
+  name: String!
+  # True if the sale is active, i.e. not paused.
+  active: Boolean!
+  clubs: [SaleClub!]! @derivedFrom (field: "tier")
+  pausedClubs: [SaleClub!]! @derivedFrom (field: "pausedInTier")
+  pricingSteps: [PricingStep!]! @derivedFrom (field: "tier")
+  packsBought: [PacksBought!]! @derivedFrom (field: "tier")
+}
+
+# A pricing step for a sale tier.
+type PricingStep @entity (immutable: false) {
+  # The ID is the tier ID / address and the step index added.
+  id: Bytes!
+  tier: SaleTier!
+  index: Int!
+  # Number of shares available at this price.
+  numShares: Int!
+  # Price of one share in this batch.
+  price: BigInt!
+  # Minimum number of shares minted before this is in effect.
+  fromTotal: Int!
+  # Maximum number of shares minted when this is still in effect.
+  toTotal: Int!
+}
+
+# A club in the sale.
+type SaleClub @entity (immutable: false) {
+  # The ID is the club ID as integer converted to bytes.
+  id: Bytes!
+  clubId: Int!
+  # The SaleTier this is part of, if the club is actively sold.
+  tier: SaleTier
+  # The SaleTier this is part of as a paused club.
+  pausedInTier: SaleTier
+  # Total number of shares minted in the club so far.
+  minted: Int!
+  # The current tranche for the sale (or -1 if not for sale).
+  trancheIndex: Int!
+  # Number of influence remaining at the current tranche.  Zero if
+  # there is none for sale.
+  remainingInTranche: Int!
+  primaryPack: Pack @derivedFrom (field: "primaryClub")
+  containedInPacks: [PackShareContent!]! @derivedFrom (field: "club")
+  packsBought: [PacksBought!]! @derivedFrom (field: "primaryClub")
+}
+
+# A pack that can be bought in the shop.
+type Pack @entity (immutable: false) {
+  # The ID is the primary club ID as integer converted to bytes.
+  id: Bytes!
+  primaryClub: SaleClub!
+  # All club shares in the pack (including the primary one).
+  shares: [PackShareContent!]! @derivedFrom (field: "pack")
+  # Maximum number of packs that can be purchased.
+  maxPacks: Int!
+  # Cost of one pack in USDC/token base units.
+  cost: BigInt!
+}
+
+# Mapping table for all club shares included in packs.
+type PackShareContent @entity (immutable: false) {
+  # The ID is the pack ID concat the club ID.
+  id: Bytes!
+  pack: Pack!
+  club: SaleClub!
+  num: Int!
+}
+
+# Each individual pack sale is recorded here.
+type PacksBought @entity (immutable: true) {
+  # The ID is constructed from txid and log index and just a unique ID.
+  id: Bytes!
+  timestamp: BigInt!
+  # The buying address.
+  buyer: Bytes!
+  # The account name receiving the influence.
+  receiver: String!
+  primaryClub: SaleClub!
+  # The tier of this pack, at the time of buying (in case the club is
+  # changed later to be in another tier).
+  tier: SaleTier!
+  numPacks: Int!
+  usdSpent: BigInt!
+}
+
+################################################################################
+# Price data for WCHI from Uniswap
+
+# Data about a token that we track prices for.
+type Token @entity (immutable: true) {
+  # The ID is the contract address.
+  id: Bytes!
+  # Number of decimals.
+  decimals: Int!
+  # The token symbol / tracker.
+  symbol: String!
+}
+
+# A pair of tokens that we track prices for.
+type TokenPair @entity (immutable: true) {
+  # The ID is constructed by concat of tradedToken and baseToken.
+  id: Bytes!
+  # The token being traded (such as WCHI for the WCHI/WETH pair).
+  tradedToken: Token!
+  # The base token in which prices are denominated (such as WETH for WCHI/WETH).
+  baseToken: Token!
+  # The address of the Uniswap pair contract.
+  uniswapPair: Bytes!
+  # Price observations for this token pair.
+  prices: [PriceObservation!]! @derivedFrom (field: "pair")
+}
+
+# Average, periodic pricing data from Uniswap v2 for token pairs.  These
+# observations are recorded at fixed intervals, at virtual timestamps that
+# represent these intervals exactly (such as UNIX timestamps for every whole
+# hour or daily UTC midnights).
+type PriceObservation @entity (immutable: true) {
+  # The ID is constructed by concat of the token pair ID and the virtual
+  # timestamp as 64-bit big-endian integer (so IDs sort chronologically).
+  id: Bytes!
+  # The token pair this is for.
+  pair: TokenPair!
+
+  # The virtual timestamp this observation is for.
+  virtualTimestamp: BigInt!
+
+  # The exact timestamp this observation is for.  This might be slightly
+  # larger than the virtual timestamp, since the actual logic to take
+  # observations runs at certain block intervals, and uses the first block
+  # it runs on after a desired exact observation timestamp to get the values.
+  exactTimestamp: BigInt!
+
+  # The prices are encoded as fixed-point numbers with denominator 2**112,
+  # like Uniswap's UQ112x112 format.  Unlike Uniswap, they take token decimals
+  # into account already, so the real number represented by the fixed-point
+  # value is the actual, human-readable token price in real token units
+  # (not the underlying integer base units).
+
+  # The cumulative price from the Uniswap pair as per the timestamp, encoded
+  # as fixed-point number.
+  cumulativePrice: BigInt!
+  # The moving average 24 hour price of the token as per the observation time.
+  # This will not be set for the initial 24 hours of observations.
+  average24h: BigInt
+}

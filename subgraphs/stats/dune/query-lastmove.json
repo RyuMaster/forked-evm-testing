@@ -1,0 +1,7 @@
+{
+  "name": "Last Move's Timestamp",
+  "description": "Returns the latest timestamp of any recorded move",
+  "parameters": [],
+  "is_private": false,
+  "query_sql": "SELECT MAX(\"timestamp\") AS \"latest_time\" FROM dune.xaya.moves"
+}

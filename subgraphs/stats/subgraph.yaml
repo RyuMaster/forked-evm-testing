@@ -1,0 +1,37 @@
+specVersion: 1.1.0
+schema:
+  file: schema.graphql
+dataSources:
+  - kind: ethereum/contract
+    name: XayaAccounts
+    network: matic
+    source:
+      address: "0x8C12253F71091b9582908C8a44F78870Ec6F304F"
+      abi: IXayaAccounts
+      startBlock: 28432385
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Address
+        - Game
+        - GameMove
+        - Move
+        - Name
+        - Namespace
+        - Payment
+        - ProfileData
+        - Registration
+        - Transaction
+      abis:
+        - name: IXayaAccounts
+          file: ./abi/IXayaAccounts.json
+      eventHandlers:
+        - event: Move(string,string,string,indexed uint256,uint256,address,uint256,address)
+          handler: handleMove
+        - event: Registration(string,string,indexed uint256,address)
+          handler: handleRegistration
+        - event: Transfer(indexed address,indexed address,indexed uint256)
+          handler: handleTransfer
+      file: src/handlers.ts

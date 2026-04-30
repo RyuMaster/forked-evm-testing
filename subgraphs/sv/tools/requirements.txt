@@ -1,0 +1,3 @@
+requests
+simple-multicall-v6
+web3==7

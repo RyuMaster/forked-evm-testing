@@ -1,0 +1,3501 @@
+openapi: 3.0.0
+info:
+  title: FastAPI
+  version: 0.1.0
+paths:
+  /players/detailed:
+    get:
+      tags:
+      - Players
+      summary: Retrieve detailed soccer player data
+      description: Provides a paginated list of players with additional fields such
+        as fitness, injuries, contract details, rating breakdowns, and more comprehensive
+        stats.
+      operationId: get_players_detailed_players_detailed_get
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          description: Page number, starting from 1
+          default: 1
+          title: Page
+        description: Page number, starting from 1
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/PerPageOptions'
+          description: 'Number of records per page (options: 5, 10, 20, 50)'
+          default: 20
+        description: 'Number of records per page (options: 5, 10, 20, 50)'
+      - name: sort_by
+        in: query
+        required: false
+        schema:
+          description: Field to sort by
+          title: Sort By
+          nullable: true
+          $ref: '#/components/schemas/PlayersSortBy'
+        description: Field to sort by
+      - name: sort_order
+        in: query
+        required: false
+        schema:
+          description: 'Sort order: ''asc'' or ''desc'''
+          default: asc
+          title: Sort Order
+          nullable: true
+          type: string
+          pattern: ^(asc|desc)$
+        description: 'Sort order: ''asc'' or ''desc'''
+      - name: age_min
+        in: query
+        required: false
+        schema:
+          description: Minimum age for players
+          title: Age Min
+          nullable: true
+          type: integer
+          minimum: 0
+        description: Minimum age for players
+      - name: age_max
+        in: query
+        required: false
+        schema:
+          description: Maximum age for players
+          title: Age Max
+          nullable: true
+          type: integer
+          minimum: 0
+        description: Maximum age for players
+      - name: age
+        in: query
+        required: false
+        schema:
+          description: Exact age for players
+          title: Age
+          nullable: true
+          type: integer
+          minimum: 0
+        description: Exact age for players
+      - name: player_id
+        in: query
+        required: false
+        schema:
+          description: Filter by specific player ID(s)
+          title: Player Id
+          nullable: true
+          type: array
+          items:
+            type: integer
+        description: Filter by specific player ID(s)
+        example: 1100
+      - name: wages_min
+        in: query
+        required: false
+        schema:
+          description: Minimum wages
+          title: Wages Min
+          nullable: true
+          type: integer
+        description: Minimum wages
+      - name: wages_max
+        in: query
+        required: false
+        schema:
+          description: Maximum wages
+          title: Wages Max
+          nullable: true
+          type: integer
+        description: Maximum wages
+      - name: contract_min
+        in: query
+        required: false
+        schema:
+          description: Minimum contract
+          title: Contract Min
+          nullable: true
+          type: integer
+        description: Minimum contract
+      - name: contract_max
+        in: query
+        required: false
+        schema:
+          description: Maximum contract
+          title: Contract Max
+          nullable: true
+          type: integer
+        description: Maximum contract
+      - name: rating_min
+        in: query
+        required: false
+        schema:
+          description: Minimum rating
+          title: Rating Min
+          nullable: true
+          type: integer
+        description: Minimum rating
+      - name: rating_max
+        in: query
+        required: false
+        schema:
+          description: Maximum rating
+          title: Rating Max
+          nullable: true
+          type: integer
+        description: Maximum rating
+      - name: rating_gk_min
+        in: query
+        required: false
+        schema:
+          description: Minimum rating_gk
+          title: Rating Gk Min
+          nullable: true
+          type: integer
+        description: Minimum rating_gk
+      - name: rating_gk_max
+        in: query
+        required: false
+        schema:
+          description: Maximum rating_gk
+          title: Rating Gk Max
+          nullable: true
+          type: integer
+        description: Maximum rating_gk
+      - name: rating_tackling_min
+        in: query
+        required: false
+        schema:
+          description: Minimum rating_tackling
+          title: Rating Tackling Min
+          nullable: true
+          type: integer
+        description: Minimum rating_tackling
+      - name: rating_tackling_max
+        in: query
+        required: false
+        schema:
+          description: Maximum rating_tackling
+          title: Rating Tackling Max
+          nullable: true
+          type: integer
+        description: Maximum rating_tackling
+      - name: rating_passing_min
+        in: query
+        required: false
+        schema:
+          description: Minimum rating_passing
+          title: Rating Passing Min
+          nullable: true
+          type: integer
+        description: Minimum rating_passing
+      - name: rating_passing_max
+        in: query
+        required: false
+        schema:
+          description: Maximum rating_passing
+          title: Rating Passing Max
+          nullable: true
+          type: integer
+        description: Maximum rating_passing
+      - name: rating_shooting_min
+        in: query
+        required: false
+        schema:
+          description: Minimum rating_shooting
+          title: Rating Shooting Min
+          nullable: true
+          type: integer
+        description: Minimum rating_shooting
+      - name: rating_shooting_max
+        in: query
+        required: false
+        schema:
+          description: Maximum rating_shooting
+          title: Rating Shooting Max
+          nullable: true
+          type: integer
+        description: Maximum rating_shooting
+      - name: rating_aggression_min
+        in: query
+        required: false
+        schema:
+          description: Minimum rating_aggression
+          title: Rating Aggression Min
+          nullable: true
+          type: integer
+        description: Minimum rating_aggression
+      - name: rating_aggression_max
+        in: query
+        required: false
+        schema:
+          description: Maximum rating_aggression
+          title: Rating Aggression Max
+          nullable: true
+          type: integer
+        description: Maximum rating_aggression
+      - name: rating_stamina_min
+        in: query
+        required: false
+        schema:
+          description: Minimum rating_stamina
+          title: Rating Stamina Min
+          nullable: true
+          type: integer
+        description: Minimum rating_stamina
+      - name: rating_stamina_max
+        in: query
+        required: false
+        schema:
+          description: Maximum rating_stamina
+          title: Rating Stamina Max
+          nullable: true
+          type: integer
+        description: Maximum rating_stamina
+      - name: value_min
+        in: query
+        required: false
+        schema:
+          description: Minimum value
+          title: Value Min
+          nullable: true
+          type: integer
+        description: Minimum value
+      - name: value_max
+        in: query
+        required: false
+        schema:
+          description: Maximum value
+          title: Value Max
+          nullable: true
+          type: integer
+        description: Maximum value
+      - name: desired_contract_min
+        in: query
+        required: false
+        schema:
+          description: Minimum desired_contract
+          title: Desired Contract Min
+          nullable: true
+          type: integer
+        description: Minimum desired_contract
+      - name: desired_contract_max
+        in: query
+        required: false
+        schema:
+          description: Maximum desired_contract
+          title: Desired Contract Max
+          nullable: true
+          type: integer
+        description: Maximum desired_contract
+      - name: country_id
+        in: query
+        required: false
+        schema:
+          description: Country ID to filter players
+          title: Country Id
+          nullable: true
+          type: string
+        description: 'Country ID to filter players (Examples: ENG, ESP, ITA)'
+        example: ENG
+      - name: owned
+        in: query
+        required: false
+        schema:
+          description: Filter players owned by the given name
+          title: Owned
+          nullable: true
+          type: string
+        description: Filter players owned by the given name
+      - name: positions
+        in: query
+        required: false
+        schema:
+          description: Comma-separated list of positions to filter players
+          title: Positions
+          nullable: true
+          type: string
+        description: Comma-separated list of positions to filter players
+      - name: club_id
+        in: query
+        required: false
+        schema:
+          description: Filter by specific club ID
+          title: Club Id
+          nullable: true
+          type: integer
+        description: Filter by specific club ID
+      - name: allow_transfer
+        in: query
+        required: false
+        schema:
+          description: Filter by allow_transfer value
+          title: Allow Transfer
+          nullable: true
+          type: integer
+        description: Filter by allow_transfer value
+      - name: allow_renew
+        in: query
+        required: false
+        schema:
+          description: Filter by allow_renew value
+          title: Allow Renew
+          nullable: true
+          type: integer
+        description: Filter by allow_renew value
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_PlayerDetailedResponse_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /clubs/detailed:
+    get:
+      tags:
+      - Clubs
+      summary: Retrieve detailed data for clubs
+      description: Fetch a paginated list of clubs, including extended fields such
+        as form, stadium data, fan counts, and more advanced filtering. Returns a
+        PaginatedResponse of ClubDetailedResponse objects.
+      operationId: get_clubs_detailed_clubs_detailed_get
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          description: Page number, starting from 1
+          default: 1
+          title: Page
+        description: Page number, starting from 1
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/PerPageOptions'
+          description: 'Number of records per page (options: 5, 20, 50)'
+          default: 20
+        description: 'Number of records per page (options: 5, 20, 50)'
+      - name: sort_by
+        in: query
+        required: false
+        schema:
+          description: Field to sort by
+          title: Sort By
+          nullable: true
+          $ref: '#/components/schemas/ClubsSortBy'
+        description: Field to sort by
+      - name: sort_order
+        in: query
+        required: false
+        schema:
+          description: 'Sort order: ''asc'' or ''desc'''
+          default: asc
+          title: Sort Order
+          nullable: true
+          type: string
+          pattern: ^(asc|desc)$
+        description: 'Sort order: ''asc'' or ''desc'''
+      - name: club_id
+        in: query
+        required: false
+        schema:
+          description: Filter by specific club ID(s)
+          title: Club Id
+          nullable: true
+          type: array
+          items:
+            type: integer
+        description: Filter by specific club ID(s)
+        example: 50
+      - name: country_id
+        in: query
+        required: false
+        schema:
+          description: Country ID to filter clubs
+          title: Country Id
+          nullable: true
+          type: string
+        description: 'Country ID to filter clubs (Examples: ENG, ESP, ITA)'
+        example: ENG
+      - name: owned
+        in: query
+        required: false
+        schema:
+          description: Filter clubs owned by the given name
+          title: Owned
+          nullable: true
+          type: string
+        description: Filter clubs owned by the given name
+      - name: manager_locked
+        in: query
+        required: false
+        schema:
+          description: Exact value for manager_locked
+          title: Manager Locked
+          nullable: true
+          type: integer
+        description: Exact value for manager_locked
+      - name: available
+        in: query
+        required: false
+        schema:
+          description: 'Filter by availability status: 1 (available), 0 (not available)'
+          title: Available
+          nullable: true
+          type: integer
+        description: 'Filter by availability status: 1 (available), 0 (not available)'
+      - name: league_id
+        in: query
+        required: false
+        schema:
+          description: Filter by league ID
+          title: League Id
+          nullable: true
+          type: integer
+        description: Filter by league ID
+      - name: division
+        in: query
+        required: false
+        schema:
+          description: Filter by division
+          title: Division
+          nullable: true
+          type: integer
+        description: Filter by division
+        example: 1
+      - name: balance_min
+        in: query
+        required: false
+        schema:
+          description: Minimum balance
+          title: Balance Min
+          nullable: true
+          type: integer
+        description: Minimum balance
+      - name: balance_max
+        in: query
+        required: false
+        schema:
+          description: Maximum balance
+          title: Balance Max
+          nullable: true
+          type: integer
+        description: Maximum balance
+      - name: division_start_min
+        in: query
+        required: false
+        schema:
+          description: Minimum division_start
+          title: Division Start Min
+          nullable: true
+          type: integer
+        description: Minimum division_start
+      - name: division_start_max
+        in: query
+        required: false
+        schema:
+          description: Maximum division_start
+          title: Division Start Max
+          nullable: true
+          type: integer
+        description: Maximum division_start
+      - name: fans_start_min
+        in: query
+        required: false
+        schema:
+          description: Minimum fans_start
+          title: Fans Start Min
+          nullable: true
+          type: integer
+        description: Minimum fans_start
+      - name: fans_start_max
+        in: query
+        required: false
+        schema:
+          description: Maximum fans_start
+          title: Fans Start Max
+          nullable: true
+          type: integer
+        description: Maximum fans_start
+      - name: fans_current_min
+        in: query
+        required: false
+        schema:
+          description: Minimum fans_current
+          title: Fans Current Min
+          nullable: true
+          type: integer
+        description: Minimum fans_current
+      - name: fans_current_max
+        in: query
+        required: false
+        schema:
+          description: Maximum fans_current
+          title: Fans Current Max
+          nullable: true
+          type: integer
+        description: Maximum fans_current
+      - name: stadium_size_start_min
+        in: query
+        required: false
+        schema:
+          description: Minimum stadium_size_start
+          title: Stadium Size Start Min
+          nullable: true
+          type: integer
+        description: Minimum stadium_size_start
+      - name: stadium_size_start_max
+        in: query
+        required: false
+        schema:
+          description: Maximum stadium_size_start
+          title: Stadium Size Start Max
+          nullable: true
+          type: integer
+        description: Maximum stadium_size_start
+      - name: stadium_size_current_min
+        in: query
+        required: false
+        schema:
+          description: Minimum stadium_size_current
+          title: Stadium Size Current Min
+          nullable: true
+          type: integer
+        description: Minimum stadium_size_current
+      - name: stadium_size_current_max
+        in: query
+        required: false
+        schema:
+          description: Maximum stadium_size_current
+          title: Stadium Size Current Max
+          nullable: true
+          type: integer
+        description: Maximum stadium_size_current
+      - name: stadium_id_min
+        in: query
+        required: false
+        schema:
+          description: Minimum stadium_id
+          title: Stadium Id Min
+          nullable: true
+          type: integer
+        description: Minimum stadium_id
+      - name: stadium_id_max
+        in: query
+        required: false
+        schema:
+          description: Maximum stadium_id
+          title: Stadium Id Max
+          nullable: true
+          type: integer
+        description: Maximum stadium_id
+      - name: value_min
+        in: query
+        required: false
+        schema:
+          description: Minimum value
+          title: Value Min
+          nullable: true
+          type: integer
+        description: Minimum value
+      - name: value_max
+        in: query
+        required: false
+        schema:
+          description: Maximum value
+          title: Value Max
+          nullable: true
+          type: integer
+        description: Maximum value
+      - name: rating_start_min
+        in: query
+        required: false
+        schema:
+          description: Minimum rating
+          title: Rating Start Min
+          nullable: true
+          type: integer
+        description: Minimum rating
+      - name: rating_start_max
+        in: query
+        required: false
+        schema:
+          description: Maximum rating
+          title: Rating Start Max
+          nullable: true
+          type: integer
+        description: Maximum rating
+      - name: default_formation_min
+        in: query
+        required: false
+        schema:
+          description: Minimum default_formation
+          title: Default Formation Min
+          nullable: true
+          type: integer
+        description: Minimum default_formation
+      - name: default_formation_max
+        in: query
+        required: false
+        schema:
+          description: Maximum default_formation
+          title: Default Formation Max
+          nullable: true
+          type: integer
+        description: Maximum default_formation
+      - name: penalty_taker_min
+        in: query
+        required: false
+        schema:
+          description: Minimum penalty_taker
+          title: Penalty Taker Min
+          nullable: true
+          type: integer
+        description: Minimum penalty_taker
+      - name: penalty_taker_max
+        in: query
+        required: false
+        schema:
+          description: Maximum penalty_taker
+          title: Penalty Taker Max
+          nullable: true
+          type: integer
+        description: Maximum penalty_taker
+      - name: transfers_in_min
+        in: query
+        required: false
+        schema:
+          description: Minimum transfers_in
+          title: Transfers In Min
+          nullable: true
+          type: integer
+        description: Minimum transfers_in
+      - name: transfers_in_max
+        in: query
+        required: false
+        schema:
+          description: Maximum transfers_in
+          title: Transfers In Max
+          nullable: true
+          type: integer
+        description: Maximum transfers_in
+      - name: transfers_out_min
+        in: query
+        required: false
+        schema:
+          description: Minimum transfers_out
+          title: Transfers Out Min
+          nullable: true
+          type: integer
+        description: Minimum transfers_out
+      - name: transfers_out_max
+        in: query
+        required: false
+        schema:
+          description: Maximum transfers_out
+          title: Transfers Out Max
+          nullable: true
+          type: integer
+        description: Maximum transfers_out
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_ClubDetailedResponse_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /users/detailed:
+    get:
+      tags:
+      - Users
+      summary: Get detailed user and trading data
+      description: "Fetches a paginated list of users with detailed trading volume\
+        \ statistics \n    (daily, weekly, total), last activity, club information\
+        \ (manager voted), and profile picture. \n    Supports sorting and filtering\
+        \ by name prefix or a list of names."
+      operationId: get_users_detailed_users_detailed_get
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          description: Page number, starting from 1
+          default: 1
+          title: Page
+        description: Page number, starting from 1
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/PerPageOptions'
+          description: 'Number of records per page (options: 5, 20, 50)'
+          default: 20
+        description: 'Number of records per page (options: 5, 20, 50)'
+      - name: sort_by
+        in: query
+        required: false
+        schema:
+          description: Field to sort by
+          title: Sort By
+          nullable: true
+          $ref: '#/components/schemas/UsersDetailedSortBy'
+        description: Field to sort by
+      - name: sort_order
+        in: query
+        required: false
+        schema:
+          description: 'Sort order: ''asc'' or ''desc'''
+          default: asc
+          title: Sort Order
+          nullable: true
+          type: string
+          pattern: ^(asc|desc)$
+        description: 'Sort order: ''asc'' or ''desc'''
+      - name: name_prefix
+        in: query
+        required: false
+        schema:
+          description: Name prefix to search
+          title: Name Prefix
+          nullable: true
+          type: string
+          minLength: 2
+        description: Name prefix to search
+      - name: names
+        in: query
+        required: false
+        schema:
+          description: List of names to include
+          title: Names
+          nullable: true
+          type: array
+          items:
+            type: string
+        description: List of names to include
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_UserDetailedResponse_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /share_trade_history:
+    get:
+      tags:
+      - Share Trade History
+      summary: Retrieve share trade history
+      description: Provides a paginated record of trades (buy/sell transactions) for
+        specific clubs or players, optionally filtered by buyer/seller name.
+      operationId: get_share_trade_history_share_trade_history_get
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          description: Page number, starting from 1
+          default: 1
+          title: Page
+        description: Page number, starting from 1
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          description: Number of records per page
+          default: 50
+          title: Per Page
+        description: Number of records per page
+      - name: name
+        in: query
+        required: false
+        schema:
+          description: Name of the buyer or seller
+          title: Name
+          nullable: true
+          type: string
+        description: Name of the buyer or seller
+      - name: club_id
+        in: query
+        required: false
+        schema:
+          description: Club ID to filter trades
+          title: Club Id
+          nullable: true
+          type: integer
+        description: Club ID to filter trades
+      - name: player_id
+        in: query
+        required: false
+        schema:
+          description: Player ID to filter trades
+          title: Player Id
+          nullable: true
+          type: integer
+        description: Player ID to filter trades
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_ShareTradeResponse_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /trading_graph:
+    get:
+      tags:
+      - Trading Graph
+      summary: Retrieve aggregated trading data
+      description: Generates time-series data (volume and weighted average price)
+        for a club or player's trading activity, grouped by specified time intervals
+        (e.g., 1d, 7d, 30d, 90d, 6m, 1y).
+      operationId: get_trading_graph_trading_graph_get
+      parameters:
+      - name: club_id
+        in: query
+        required: false
+        schema:
+          description: Club ID
+          title: Club Id
+          nullable: true
+          type: integer
+        description: Club ID
+      - name: player_id
+        in: query
+        required: false
+        schema:
+          description: Player ID
+          title: Player Id
+          nullable: true
+          type: integer
+        description: Player ID
+      - name: time_range
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/TimeRangeEnum'
+          description: 'Time range: ''1d'', ''7d'', ''30d'', ''90d'', ''6m'', ''1y'''
+        description: 'Time range: ''1d'', ''7d'', ''30d'', ''90d'', ''6m'', ''1y'''
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TradingGraphDataPoint'
+                title: Response Get Trading Graph Trading Graph Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /share_balances:
+    get:
+      tags:
+      - Share Balances
+      summary: Retrieve influence balances
+      description: Returns influence ownership data for clubs or players, filtered
+        by various parameters (e.g., name, club_id, player_id). Can also aggregate
+        data by country or league.
+      operationId: get_share_balances_share_balances_get
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          description: Page number, starting from 1
+          default: 1
+          title: Page
+        description: Page number, starting from 1
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/PerPageOptions'
+          description: 'Number of records per page (options: 5, 10, 20, 50)'
+          default: 20
+        description: 'Number of records per page (options: 5, 10, 20, 50)'
+      - name: sort_by
+        in: query
+        required: false
+        schema:
+          description: 'Field to sort by (options: ''name'', ''share_type'', ''share_id'',
+            ''num'')'
+          title: Sort By
+          nullable: true
+          $ref: '#/components/schemas/ShareBalancesSortBy'
+        description: 'Field to sort by (options: ''name'', ''share_type'', ''share_id'',
+          ''num'')'
+      - name: sort_order
+        in: query
+        required: false
+        schema:
+          description: 'Sort order: ''asc'' or ''desc'''
+          default: asc
+          title: Sort Order
+          nullable: true
+          type: string
+          pattern: ^(asc|desc)$
+        description: 'Sort order: ''asc'' or ''desc'''
+      - name: club_id
+        in: query
+        required: false
+        schema:
+          description: Filter by club ID
+          title: Club Id
+          nullable: true
+          type: integer
+        description: Filter by club ID
+      - name: player_id
+        in: query
+        required: false
+        schema:
+          description: Filter by player ID
+          title: Player Id
+          nullable: true
+          type: integer
+        description: Filter by player ID
+      - name: name
+        in: query
+        required: false
+        schema:
+          description: Filter by name
+          title: Name
+          nullable: true
+          type: string
+        description: Filter by name
+      - name: countries
+        in: query
+        required: false
+        schema:
+          description: Set to True to get data aggregated per country
+          default: false
+          title: Countries
+          nullable: true
+          type: boolean
+        description: Set to True to get data aggregated per country
+      - name: leagues
+        in: query
+        required: false
+        schema:
+          description: Set to True to get data aggregated per league
+          default: false
+          title: Leagues
+          nullable: true
+          type: boolean
+        description: Set to True to get data aggregated per league
+      - name: country_id
+        in: query
+        required: false
+        schema:
+          description: Filter by country ID (used with name)
+          title: Country Id
+          nullable: true
+          type: string
+        description: 'Filter by country ID (used with name) (Examples: ENG, ESP, ITA)'
+        example: ENG
+      - name: league_id
+        in: query
+        required: false
+        schema:
+          description: Filter by league ID (used with name)
+          title: League Id
+          nullable: true
+          type: integer
+        description: Filter by league ID (used with name)
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /market:
+    get:
+      tags:
+      - Market
+      summary: Obtain overall market metrics
+      description: Retrieves aggregated market data such as total players, clubs,
+        volumes, and user balances. Provides a snapshot of the game's overall financial
+        activity.
+      operationId: get_market_data_market_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketResponse'
+  /user_activity:
+    get:
+      tags:
+      - User Activity
+      summary: Get user activity stats
+      description: "Generates user activity statistics based on moves recorded in\
+        \ the 'games' table. \n    Calculates first move time, last active time, and\
+        \ an overall point-based ranking. \n    By default, returns the top 50 ranked\
+        \ users; if 'name' is specified, returns data for that user only."
+      operationId: get_user_activity_user_activity_get
+      parameters:
+      - name: name
+        in: query
+        required: false
+        schema:
+          description: Filter by username
+          title: Name
+          nullable: true
+          type: string
+        description: Filter by username
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserActivityResponse'
+                title: Response Get User Activity User Activity Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /rich_list:
+    get:
+      tags:
+      - Rich List
+      summary: Retrieve the richest users
+      description: Generates a ranked list of users by net worth (balance + owned
+        club/player assets). Supports pagination, filtering by name, and sorting.
+      operationId: get_rich_list_rich_list_get
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          description: Page number, starting from 1
+          default: 1
+          title: Page
+        description: Page number, starting from 1
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/PerPageOptions'
+          description: 'Number of records per page (options: 5, 10, 20, 50, 100)'
+          default: 20
+        description: 'Number of records per page (options: 5, 10, 20, 50, 100)'
+      - name: name
+        in: query
+        required: false
+        schema:
+          description: Filter by specific user name (case sensitive)
+          title: Name
+          nullable: true
+          type: string
+        description: Filter by specific user name (case sensitive)
+      - name: sort_by
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/RichListSortBy'
+          description: Field to sort by ('balance' or 'total_networth')
+          default: total_networth
+        description: Field to sort by ('balance' or 'total_networth')
+      - name: sort_order
+        in: query
+        required: false
+        schema:
+          description: 'Sort order: ''asc'' or ''desc'''
+          default: desc
+          title: Sort Order
+          nullable: true
+          type: string
+          pattern: ^(asc|desc)$
+        description: 'Sort order: ''asc'' or ''desc'''
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_RichListResponse_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /best_managers:
+    get:
+      tags:
+      - Best Managers
+      summary: Get best managers data
+      description: "Retrieves a paginated list of the best managers from the database.\
+        \ Includes their ranks (old, A, B), \n    computed rankings, and associated\
+        \ profile pictures. Supports sorting, pagination, and optional filtering by\
+        \ manager name."
+      operationId: get_best_managers_best_managers_get
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          description: Page number, starting from 1
+          default: 1
+          title: Page
+        description: Page number, starting from 1
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/PerPageOptions'
+          description: 'Number of records per page (options: 5, 20, 50)'
+          default: 20
+        description: 'Number of records per page (options: 5, 20, 50)'
+      - name: sort_by
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/BestManagersSortBy'
+          description: Field to sort by
+          default: rank_a_ranking
+        description: Field to sort by
+      - name: sort_order
+        in: query
+        required: false
+        schema:
+          description: 'Sort order: ''asc'' or ''desc'''
+          default: asc
+          title: Sort Order
+          nullable: true
+          type: string
+          pattern: ^(asc|desc)$
+        description: 'Sort order: ''asc'' or ''desc'''
+      - name: name
+        in: query
+        required: false
+        schema:
+          description: Filter by specific user name (case sensitive)
+          title: Name
+          nullable: true
+          type: string
+        description: Filter by specific user name (case sensitive)
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_BestManagersResponse_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /user_balance_sheet:
+    get:
+      tags:
+      - User Balance Sheet
+      summary: Get user balance sheet entries
+      description: "Retrieves transaction-based balance sheet entries for a specific\
+        \ user. \n    Supports either a paginated query of the most recent records\
+        \ or a focused time range \n    (up to 30 days). Each entry contains amount,\
+        \ type, and referenced 'other' data."
+      operationId: get_user_balance_sheet_user_balance_sheet_get
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          description: Page number, starting from 1
+          default: 1
+          title: Page
+        description: Page number, starting from 1
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/PerPageOptionsExtended'
+          description: 'Number of records per page (options: 5, 20, 50, 100)'
+          default: 50
+        description: 'Number of records per page (options: 5, 20, 50, 100)'
+      - name: name
+        in: query
+        required: true
+        schema:
+          type: string
+          description: Name of the user
+          title: Name
+        description: Name of the user
+      - name: from_time
+        in: query
+        required: false
+        schema:
+          description: Unix time integer for start of time range
+          title: From Time
+          nullable: true
+          type: integer
+        description: Unix time integer for start of time range
+      - name: to_time
+        in: query
+        required: false
+        schema:
+          description: Unix time integer for end of time range
+          title: To Time
+          nullable: true
+          type: integer
+        description: Unix time integer for end of time range
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_UserBalanceSheetResponse_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /user_balance_sheet/weeks:
+    get:
+      tags:
+      - User Balance Sheet
+      summary: Get weekly aggregated user balance sheets
+      description: "Returns a paginated set of weekly aggregated balance sheet data\
+        \ for a given user. \n    Groups transactions by week (Saturday through Friday)\
+        \ and sums the amounts by type, \n    helping identify weekly totals at a\
+        \ glance."
+      operationId: get_user_balance_sheet_weeks_user_balance_sheet_weeks_get
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          description: Page number, starting from 1
+          default: 1
+          title: Page
+        description: Page number, starting from 1
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          description: Number of weeks per page (default 10)
+          default: 10
+          title: Per Page
+        description: Number of weeks per page (default 10)
+      - name: name
+        in: query
+        required: true
+        schema:
+          type: string
+          description: Name of the user
+          title: Name
+        description: Name of the user
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_UserWeeklyBalanceSheetResponse_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /leagues:
+    get:
+      tags:
+      - Leagues
+      summary: Retrieve data for leagues (with 5-min cache)
+      description: Fetch a paginated list of leagues along with trading volumes, market
+        cap, and other aggregate statistics. Uses an in-memory cache to serve data
+        quickly and refreshes every five minutes. Returns a PaginatedResponse of LeagueResponse
+        objects.
+      operationId: get_leagues_leagues_get
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          description: Page number, starting from 1
+          default: 1
+          title: Page
+        description: Page number, starting from 1
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/PerPageOptions'
+          description: 'Number of records per page (options: 5, 10, 20, 50)'
+          default: 20
+        description: 'Number of records per page (options: 5, 10, 20, 50)'
+      - name: sort_by
+        in: query
+        required: false
+        schema:
+          description: Field to sort by
+          title: Sort By
+          nullable: true
+          $ref: '#/components/schemas/LeaguesSortBy'
+        description: Field to sort by
+      - name: sort_order
+        in: query
+        required: false
+        schema:
+          description: 'Sort order: ''asc'' or ''desc'''
+          default: asc
+          title: Sort Order
+          nullable: true
+          type: string
+          pattern: ^(asc|desc)$
+        description: 'Sort order: ''asc'' or ''desc'''
+      - name: country_id
+        in: query
+        required: false
+        schema:
+          description: Filter by country ID
+          title: Country Id
+          nullable: true
+          type: string
+        description: 'Filter by country ID (Examples: ENG, ESP, ITA)'
+        example: ENG
+      - name: division
+        in: query
+        required: false
+        schema:
+          description: Filter by division (league level)
+          title: Division
+          nullable: true
+          type: integer
+        description: Filter by division (league level)
+        example: 1
+      - name: league_id
+        in: query
+        required: false
+        schema:
+          description: Filter by league ID
+          title: League Id
+          nullable: true
+          type: integer
+        description: Filter by league ID
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_LeagueResponse_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /league_tables:
+    get:
+      tags:
+      - Leagues
+      summary: Get league table standings
+      description: Retrieve the current league table for a specified league (or country/division
+        combination). Returns club standings such as matches played, won, lost, points,
+        and manager information. The response is a list of LeagueTableRowResponse
+        objects. For division 1, use division = 0. The Api starts at 0
+      operationId: get_league_tables_league_tables_get
+      parameters:
+      - name: league_id
+        in: query
+        required: false
+        schema:
+          description: League ID
+          title: League Id
+          nullable: true
+          type: integer
+        description: League ID
+      - name: country_id
+        in: query
+        required: false
+        schema:
+          description: Country ID
+          title: Country Id
+          nullable: true
+          type: string
+        description: 'Country ID (Examples: ENG, ESP, ITA)'
+        example: ENG
+      - name: division
+        in: query
+        required: false
+        schema:
+          description: Division (level). Starts at 0, but a user will ask for division
+            1 which is 0
+          title: Division
+          nullable: true
+          type: integer
+        description: Division (level). Starts at 0, but a user will ask for division
+          1 which is 0
+        example: 1
+      - name: season_id
+        in: query
+        required: false
+        schema:
+          description: Season ID
+          title: Season Id
+          nullable: true
+          type: integer
+        description: Season ID
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeagueTableRowResponse'
+                title: Response Get League Tables League Tables Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /countries:
+    get:
+      tags:
+      - Countries
+      summary: Retrieve data for countries
+      description: Fetch an aggregated list of countries, each with metrics such as
+        total clubs, total players, trading volumes, and market caps. A background
+        task refreshes the data every five minutes. Returns a list of CountryResponse
+        objects.
+      operationId: get_countries_countries_get
+      parameters:
+      - name: sort_by
+        in: query
+        required: false
+        schema:
+          description: Field to sort by
+          title: Sort By
+          nullable: true
+          $ref: '#/components/schemas/CountriesSortBy'
+        description: Field to sort by
+      - name: sort_order
+        in: query
+        required: false
+        schema:
+          description: 'Sort order: ''asc'' or ''desc'''
+          default: desc
+          title: Sort Order
+          nullable: true
+          type: string
+          pattern: ^(asc|desc)$
+        description: 'Sort order: ''asc'' or ''desc'''
+      - name: country_id
+        in: query
+        required: false
+        schema:
+          description: Filter by country ID
+          title: Country Id
+          nullable: true
+          type: string
+        description: 'Filter by country ID (Examples: ENG, ESP, ITA)'
+        example: ENG
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CountryResponse'
+                title: Response Get Countries Countries Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /club_balance_sheet/weeks:
+    get:
+      tags:
+      - Club Balance Sheet
+      summary: Get club balance sheet entries by game week
+      description: Returns a list of aggregated balance-sheet entries for the specified
+        club and season, grouped by distinct block dates in ascending order. Each
+        block date corresponds to a new 'game_week'. No pagination is used.
+      operationId: get_club_balance_sheet_weeks_club_balance_sheet_weeks_get
+      parameters:
+      - name: club_id
+        in: query
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+          description: Club ID
+          title: Club Id
+        description: Club ID
+      - name: season_id
+        in: query
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+          description: Season ID
+          title: Season Id
+        description: Season ID
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ClubWeeklyBalanceSheetResponse'
+                title: Response Get Club Balance Sheet Weeks Club Balance Sheet Weeks
+                  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+components:
+  schemas:
+    BestManagersResponse:
+      properties:
+        name:
+          type: string
+          title: Name
+        rank_old:
+          title: Rank Old
+          nullable: true
+          type: integer
+        rank_old_ranking:
+          title: Rank Old Ranking
+          nullable: true
+          type: integer
+        rank_a:
+          title: Rank A
+          nullable: true
+          type: integer
+        rank_a_ranking:
+          title: Rank A Ranking
+          nullable: true
+          type: integer
+        rank_b:
+          title: Rank B
+          nullable: true
+          type: integer
+        rank_b_ranking:
+          title: Rank B Ranking
+          nullable: true
+          type: integer
+        profile_pic:
+          title: Profile Pic
+          nullable: true
+          type: string
+      type: object
+      required:
+      - name
+      - rank_old
+      - rank_old_ranking
+      - rank_a
+      - rank_a_ranking
+      - rank_b
+      - rank_b_ranking
+      title: BestManagersResponse
+    BestManagersSortBy:
+      type: string
+      enum:
+      - name
+      - rank_old
+      - rank_old_ranking
+      - rank_a
+      - rank_a_ranking
+      - rank_b
+      - rank_b_ranking
+      title: BestManagersSortBy
+    ClubDetailedResponse:
+      properties:
+        club_id:
+          type: integer
+          title: Club Id
+        balance:
+          title: Balance
+          nullable: true
+          type: integer
+        form:
+          title: Form
+          nullable: true
+          type: string
+        division_start:
+          title: Division Start
+          nullable: true
+          type: integer
+        fans_start:
+          title: Fans Start
+          nullable: true
+          type: integer
+        fans_current:
+          title: Fans Current
+          nullable: true
+          type: integer
+        stadium_size_start:
+          title: Stadium Size Start
+          nullable: true
+          type: integer
+        stadium_size_current:
+          title: Stadium Size Current
+          nullable: true
+          type: integer
+        stadium_id:
+          title: Stadium Id
+          nullable: true
+          type: integer
+        value:
+          title: Value
+          nullable: true
+          type: integer
+        rating_start:
+          title: Rating Start
+          nullable: true
+          type: integer
+        manager_name:
+          title: Manager Name
+          nullable: true
+          type: string
+        default_formation:
+          title: Default Formation
+          nullable: true
+          type: integer
+        penalty_taker:
+          title: Penalty Taker
+          nullable: true
+          type: integer
+        country_id:
+          title: Country Id
+          nullable: true
+          type: string
+        manager_locked:
+          title: Manager Locked
+          nullable: true
+          type: integer
+        transfers_in:
+          title: Transfers In
+          nullable: true
+          type: integer
+        transfers_out:
+          title: Transfers Out
+          nullable: true
+          type: integer
+        committed_tactics:
+          title: Committed Tactics
+          nullable: true
+          type: string
+        proposed_manager:
+          title: Proposed Manager
+          nullable: true
+          type: string
+        last_price:
+          type: integer
+          title: Last Price
+          default: 0
+        volume_1_day:
+          type: integer
+          title: Volume 1 Day
+          default: 0
+        volume_7_day:
+          type: integer
+          title: Volume 7 Day
+          default: 0
+        last_7days:
+          title: Last 7Days
+          nullable: true
+          items:
+            type: integer
+          type: array
+        last_7days_price:
+          title: Last 7Days Price
+          nullable: true
+          items:
+            type: integer
+          type: array
+        available:
+          type: integer
+          title: Available
+        league_id:
+          title: League Id
+          nullable: true
+          type: integer
+        division:
+          title: Division
+          nullable: true
+          type: integer
+        avg_wages:
+          title: Avg Wages
+          nullable: true
+          type: integer
+        total_wages:
+          title: Total Wages
+          nullable: true
+          type: integer
+        total_player_value:
+          title: Total Player Value
+          nullable: true
+          type: integer
+        avg_player_rating:
+          title: Avg Player Rating
+          nullable: true
+          type: integer
+        avg_player_rating_top21:
+          title: Avg Player Rating Top21
+          nullable: true
+          type: integer
+        avg_shooting:
+          title: Avg Shooting
+          nullable: true
+          type: integer
+        avg_passing:
+          title: Avg Passing
+          nullable: true
+          type: integer
+        avg_tackling:
+          title: Avg Tackling
+          nullable: true
+          type: integer
+        gk_rating:
+          title: Gk Rating
+          nullable: true
+          type: integer
+        profile_pic:
+          title: Profile Pic
+          nullable: true
+          type: string
+        manager_voted:
+          title: Manager Voted
+          nullable: true
+          type: integer
+      type: object
+      required:
+      - club_id
+      - balance
+      - form
+      - division_start
+      - fans_start
+      - fans_current
+      - stadium_size_start
+      - stadium_size_current
+      - stadium_id
+      - value
+      - rating_start
+      - manager_name
+      - default_formation
+      - penalty_taker
+      - country_id
+      - manager_locked
+      - transfers_in
+      - transfers_out
+      - committed_tactics
+      - proposed_manager
+      - available
+      - league_id
+      - division
+      - avg_wages
+      - total_wages
+      - total_player_value
+      - avg_player_rating
+      - avg_player_rating_top21
+      - avg_shooting
+      - avg_passing
+      - avg_tackling
+      - gk_rating
+      title: ClubDetailedResponse
+    ClubResponse:
+      properties:
+        club_id:
+          type: integer
+          title: Club Id
+        last_price:
+          type: integer
+          title: Last Price
+          default: 0
+        volume_1_day:
+          type: integer
+          title: Volume 1 Day
+          default: 0
+        volume_7_day:
+          type: integer
+          title: Volume 7 Day
+          default: 0
+        last_7days:
+          title: Last 7Days
+          nullable: true
+          items:
+            type: integer
+          type: array
+        last_7days_price:
+          title: Last 7Days Price
+          nullable: true
+          items:
+            type: integer
+          type: array
+        balance:
+          title: Balance
+          nullable: true
+          type: integer
+        manager_name:
+          title: Manager Name
+          nullable: true
+          type: string
+        country_id:
+          title: Country Id
+          nullable: true
+          type: string
+        value:
+          title: Value
+          nullable: true
+          type: integer
+        rating_start:
+          title: Rating Start
+          nullable: true
+          type: integer
+        profile_pic:
+          title: Profile Pic
+          nullable: true
+          type: string
+      type: object
+      required:
+      - club_id
+      - balance
+      - manager_name
+      - country_id
+      - value
+      - rating_start
+      title: ClubResponse
+    ClubWeeklyBalanceSheetResponse:
+      properties:
+        season:
+          type: integer
+          title: Season
+        game_week:
+          type: integer
+          title: Game Week
+        date:
+          type: integer
+          title: Date
+        agent_wages:
+          type: integer
+          title: Agent Wages
+        cash_injection:
+          type: integer
+          title: Cash Injection
+        gate_receipts:
+          type: integer
+          title: Gate Receipts
+        ground_maintenance:
+          type: integer
+          title: Ground Maintenance
+        managers_wage:
+          type: integer
+          title: Managers Wage
+        merchandise:
+          type: integer
+          title: Merchandise
+        other_income:
+          type: integer
+          title: Other Income
+        other_outgoings:
+          type: integer
+          title: Other Outgoings
+        player_wages:
+          type: integer
+          title: Player Wages
+        prize_money:
+          type: integer
+          title: Prize Money
+        shareholder_payouts:
+          type: integer
+          title: Shareholder Payouts
+        shareholder_prize_money:
+          type: integer
+          title: Shareholder Prize Money
+        sponsor:
+          type: integer
+          title: Sponsor
+        transfers_in:
+          type: integer
+          title: Transfers In
+        transfers_out:
+          type: integer
+          title: Transfers Out
+        tv_revenue:
+          type: integer
+          title: Tv Revenue
+      type: object
+      required:
+      - season
+      - game_week
+      - date
+      - agent_wages
+      - cash_injection
+      - gate_receipts
+      - ground_maintenance
+      - managers_wage
+      - merchandise
+      - other_income
+      - other_outgoings
+      - player_wages
+      - prize_money
+      - shareholder_payouts
+      - shareholder_prize_money
+      - sponsor
+      - transfers_in
+      - transfers_out
+      - tv_revenue
+      title: ClubWeeklyBalanceSheetResponse
+    ClubsSortBy:
+      type: string
+      enum:
+      - club_id
+      - last_price
+      - volume_1_day
+      - volume_7_day
+      - balance
+      - country_id
+      - value
+      - rating_start
+      - league_id
+      - division
+      title: ClubsSortBy
+    CountriesSortBy:
+      type: string
+      enum:
+      - country_id
+      - total_clubs
+      - total_players
+      - total_volume_1_day
+      - total_volume_7_day
+      - market_cap
+      - club_market_cap
+      - player_market_cap
+      - total_available_jobs
+      - total_leagues
+      title: CountriesSortBy
+    CountryResponse:
+      properties:
+        country_id:
+          type: string
+          title: Country Id
+        total_clubs:
+          type: integer
+          title: Total Clubs
+          default: 0
+        total_players:
+          type: integer
+          title: Total Players
+          default: 0
+        total_volume_1_day:
+          type: integer
+          title: Total Volume 1 Day
+          default: 0
+        total_volume_7_day:
+          type: integer
+          title: Total Volume 7 Day
+          default: 0
+        last_7days:
+          title: Last 7Days
+          nullable: true
+          items:
+            type: integer
+          type: array
+        market_cap:
+          type: integer
+          title: Market Cap
+          default: 0
+        club_market_cap:
+          type: integer
+          title: Club Market Cap
+          default: 0
+        player_market_cap:
+          type: integer
+          title: Player Market Cap
+          default: 0
+        total_available_jobs:
+          type: integer
+          title: Total Available Jobs
+          default: 0
+        total_leagues:
+          type: integer
+          title: Total Leagues
+          default: 0
+      type: object
+      required:
+      - country_id
+      title: CountryResponse
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    LeagueResponse:
+      properties:
+        league_id:
+          type: integer
+          title: League Id
+        country_id:
+          title: Country Id
+          nullable: true
+          type: string
+        division:
+          title: Division
+          nullable: true
+          type: integer
+        ticket_cost:
+          title: Ticket Cost
+          nullable: true
+          type: integer
+        tv_money:
+          title: Tv Money
+          nullable: true
+          type: integer
+        prize_money_pot:
+          title: Prize Money Pot
+          nullable: true
+          type: integer
+        ave_attendance:
+          title: Ave Attendance
+          nullable: true
+          type: integer
+        num_teams:
+          title: Num Teams
+          nullable: true
+          type: integer
+        round:
+          title: Round
+          nullable: true
+          type: integer
+        num_rounds:
+          title: Num Rounds
+          nullable: true
+          type: integer
+        comp_type:
+          title: Comp Type
+          nullable: true
+          type: integer
+        total_volume_1_day:
+          type: integer
+          title: Total Volume 1 Day
+          default: 0
+        total_volume_7_day:
+          type: integer
+          title: Total Volume 7 Day
+          default: 0
+        last_7days:
+          title: Last 7Days
+          nullable: true
+          items:
+            type: integer
+          type: array
+        volume_clubs_1_day:
+          type: integer
+          title: Volume Clubs 1 Day
+          default: 0
+        volume_players_1_day:
+          type: integer
+          title: Volume Players 1 Day
+          default: 0
+        volume_clubs_7_day:
+          type: integer
+          title: Volume Clubs 7 Day
+          default: 0
+        volume_players_7_day:
+          type: integer
+          title: Volume Players 7 Day
+          default: 0
+        market_cap:
+          type: integer
+          title: Market Cap
+          default: 0
+        club_market_cap:
+          type: integer
+          title: Club Market Cap
+          default: 0
+        player_market_cap:
+          type: integer
+          title: Player Market Cap
+          default: 0
+        total_wages:
+          type: integer
+          title: Total Wages
+          default: 0
+        avg_wages:
+          type: integer
+          title: Avg Wages
+          default: 0
+        total_player_value:
+          type: integer
+          title: Total Player Value
+          default: 0
+        total_clubs:
+          type: integer
+          title: Total Clubs
+          default: 0
+        total_players:
+          type: integer
+          title: Total Players
+          default: 0
+        total_available_jobs:
+          type: integer
+          title: Total Available Jobs
+          default: 0
+      type: object
+      required:
+      - league_id
+      - country_id
+      - division
+      - ticket_cost
+      - tv_money
+      - prize_money_pot
+      - ave_attendance
+      - num_teams
+      - round
+      - num_rounds
+      - comp_type
+      title: LeagueResponse
+    LeagueTableRowResponse:
+      properties:
+        club_id:
+          type: integer
+          title: Club Id
+        league_id:
+          type: integer
+          title: League Id
+        manager_name:
+          title: Manager Name
+          nullable: true
+          type: string
+        country_id:
+          type: string
+          title: Country Id
+        division:
+          type: integer
+          title: Division
+        club_ix:
+          type: integer
+          title: Club Ix
+        played:
+          type: integer
+          title: Played
+        won:
+          type: integer
+          title: Won
+        drawn:
+          type: integer
+          title: Drawn
+        lost:
+          type: integer
+          title: Lost
+        goals_for:
+          type: integer
+          title: Goals For
+        goals_against:
+          type: integer
+          title: Goals Against
+        pts:
+          type: integer
+          title: Pts
+        form:
+          type: string
+          title: Form
+        old_position:
+          type: integer
+          title: Old Position
+        new_position:
+          type: integer
+          title: New Position
+        season_id:
+          type: integer
+          title: Season Id
+      type: object
+      required:
+      - club_id
+      - league_id
+      - country_id
+      - division
+      - club_ix
+      - played
+      - won
+      - drawn
+      - lost
+      - goals_for
+      - goals_against
+      - pts
+      - form
+      - old_position
+      - new_position
+      - season_id
+      title: LeagueTableRowResponse
+    LeaguesSortBy:
+      type: string
+      enum:
+      - league_id
+      - country_id
+      - division
+      - ticket_cost
+      - tv_money
+      - prize_money_pot
+      - ave_attendance
+      - num_teams
+      - round
+      - num_rounds
+      - comp_type
+      - total_volume_1_day
+      - total_volume_7_day
+      - volume_clubs_1_day
+      - volume_players_1_day
+      - volume_clubs_7_day
+      - volume_players_7_day
+      - market_cap
+      - club_market_cap
+      - player_market_cap
+      - total_wages
+      - avg_wages
+      - total_player_value
+      - total_clubs
+      - total_players
+      - total_available_jobs
+      title: LeaguesSortBy
+    MarketResponse:
+      properties:
+        TotalPlayers:
+          type: integer
+          title: Totalplayers
+        PlayersMarketCap:
+          type: integer
+          title: Playersmarketcap
+        PlayerValues:
+          type: integer
+          title: Playervalues
+        Players7dayVolume:
+          type: integer
+          title: Players7Dayvolume
+        TotalClubs:
+          type: integer
+          title: Totalclubs
+        ClubsMarketCap:
+          type: integer
+          title: Clubsmarketcap
+        ClubBalances:
+          type: integer
+          title: Clubbalances
+        Clubs7dayVolume:
+          type: integer
+          title: Clubs7Dayvolume
+        TotalMarketCap:
+          type: integer
+          title: Totalmarketcap
+        Total7dayVolume:
+          type: integer
+          title: Total7Dayvolume
+        UserBalances:
+          type: integer
+          title: Userbalances
+        UserTotalVolume:
+          type: integer
+          title: Usertotalvolume
+        NumberOfUsers:
+          type: integer
+          title: Numberofusers
+        NumberAgents:
+          type: integer
+          title: Numberagents
+        NumberManagers:
+          type: integer
+          title: Numbermanagers
+        ActiveUsers:
+          type: integer
+          title: Activeusers
+        ActiveManagers:
+          type: integer
+          title: Activemanagers
+        InactiveManagers:
+          type: integer
+          title: Inactivemanagers
+      type: object
+      required:
+      - TotalPlayers
+      - PlayersMarketCap
+      - PlayerValues
+      - Players7dayVolume
+      - TotalClubs
+      - ClubsMarketCap
+      - ClubBalances
+      - Clubs7dayVolume
+      - TotalMarketCap
+      - Total7dayVolume
+      - UserBalances
+      - UserTotalVolume
+      - NumberOfUsers
+      - NumberAgents
+      - NumberManagers
+      - ActiveUsers
+      - ActiveManagers
+      - InactiveManagers
+      title: MarketResponse
+    PaginatedResponse_BestManagersResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          title: Total
+          nullable: true
+          type: integer
+        total_pages:
+          title: Total Pages
+          nullable: true
+          type: integer
+        items:
+          items:
+            $ref: '#/components/schemas/BestManagersResponse'
+          type: array
+          title: Items
+      type: object
+      required:
+      - page
+      - per_page
+      - items
+      title: PaginatedResponse[BestManagersResponse]
+    PaginatedResponse_ClubDetailedResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          title: Total
+          nullable: true
+          type: integer
+        total_pages:
+          title: Total Pages
+          nullable: true
+          type: integer
+        items:
+          items:
+            $ref: '#/components/schemas/ClubDetailedResponse'
+          type: array
+          title: Items
+      type: object
+      required:
+      - page
+      - per_page
+      - items
+      title: PaginatedResponse[ClubDetailedResponse]
+    PaginatedResponse_ClubResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          title: Total
+          nullable: true
+          type: integer
+        total_pages:
+          title: Total Pages
+          nullable: true
+          type: integer
+        items:
+          items:
+            $ref: '#/components/schemas/ClubResponse'
+          type: array
+          title: Items
+      type: object
+      required:
+      - page
+      - per_page
+      - items
+      title: PaginatedResponse[ClubResponse]
+    PaginatedResponse_LeagueResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          title: Total
+          nullable: true
+          type: integer
+        total_pages:
+          title: Total Pages
+          nullable: true
+          type: integer
+        items:
+          items:
+            $ref: '#/components/schemas/LeagueResponse'
+          type: array
+          title: Items
+      type: object
+      required:
+      - page
+      - per_page
+      - items
+      title: PaginatedResponse[LeagueResponse]
+    PaginatedResponse_PlayerDetailedResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          title: Total
+          nullable: true
+          type: integer
+        total_pages:
+          title: Total Pages
+          nullable: true
+          type: integer
+        items:
+          items:
+            $ref: '#/components/schemas/PlayerDetailedResponse'
+          type: array
+          title: Items
+      type: object
+      required:
+      - page
+      - per_page
+      - items
+      title: PaginatedResponse[PlayerDetailedResponse]
+    PaginatedResponse_PlayerResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          title: Total
+          nullable: true
+          type: integer
+        total_pages:
+          title: Total Pages
+          nullable: true
+          type: integer
+        items:
+          items:
+            $ref: '#/components/schemas/PlayerResponse'
+          type: array
+          title: Items
+      type: object
+      required:
+      - page
+      - per_page
+      - items
+      title: PaginatedResponse[PlayerResponse]
+    PaginatedResponse_RichListResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          title: Total
+          nullable: true
+          type: integer
+        total_pages:
+          title: Total Pages
+          nullable: true
+          type: integer
+        items:
+          items:
+            $ref: '#/components/schemas/RichListResponse'
+          type: array
+          title: Items
+      type: object
+      required:
+      - page
+      - per_page
+      - items
+      title: PaginatedResponse[RichListResponse]
+    PaginatedResponse_ShareTradeResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          title: Total
+          nullable: true
+          type: integer
+        total_pages:
+          title: Total Pages
+          nullable: true
+          type: integer
+        items:
+          items:
+            $ref: '#/components/schemas/ShareTradeResponse'
+          type: array
+          title: Items
+      type: object
+      required:
+      - page
+      - per_page
+      - items
+      title: PaginatedResponse[ShareTradeResponse]
+    PaginatedResponse_UserBalanceSheetResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          title: Total
+          nullable: true
+          type: integer
+        total_pages:
+          title: Total Pages
+          nullable: true
+          type: integer
+        items:
+          items:
+            $ref: '#/components/schemas/UserBalanceSheetResponse'
+          type: array
+          title: Items
+      type: object
+      required:
+      - page
+      - per_page
+      - items
+      title: PaginatedResponse[UserBalanceSheetResponse]
+    PaginatedResponse_UserDetailedResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          title: Total
+          nullable: true
+          type: integer
+        total_pages:
+          title: Total Pages
+          nullable: true
+          type: integer
+        items:
+          items:
+            $ref: '#/components/schemas/UserDetailedResponse'
+          type: array
+          title: Items
+      type: object
+      required:
+      - page
+      - per_page
+      - items
+      title: PaginatedResponse[UserDetailedResponse]
+    PaginatedResponse_UserResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          title: Total
+          nullable: true
+          type: integer
+        total_pages:
+          title: Total Pages
+          nullable: true
+          type: integer
+        items:
+          items:
+            $ref: '#/components/schemas/UserResponse'
+          type: array
+          title: Items
+      type: object
+      required:
+      - page
+      - per_page
+      - items
+      title: PaginatedResponse[UserResponse]
+    PaginatedResponse_UserWeeklyBalanceSheetResponse_:
+      properties:
+        page:
+          type: integer
+          title: Page
+        per_page:
+          type: integer
+          title: Per Page
+        total:
+          title: Total
+          nullable: true
+          type: integer
+        total_pages:
+          title: Total Pages
+          nullable: true
+          type: integer
+        items:
+          items:
+            $ref: '#/components/schemas/UserWeeklyBalanceSheetResponse'
+          type: array
+          title: Items
+      type: object
+      required:
+      - page
+      - per_page
+      - items
+      title: PaginatedResponse[UserWeeklyBalanceSheetResponse]
+    PerPageOptions:
+      type: integer
+      enum:
+      - 5
+      - 10
+      - 20
+      - 50
+      - 100
+      title: PerPageOptions
+    PerPageOptionsExtended:
+      type: integer
+      enum:
+      - 5
+      - 10
+      - 20
+      - 50
+      - 100
+      title: PerPageOptionsExtended
+    PlayerDetailedResponse:
+      properties:
+        player_id:
+          type: integer
+          title: Player Id
+        fitness:
+          title: Fitness
+          nullable: true
+          type: integer
+        retired:
+          title: Retired
+          nullable: true
+          type: integer
+        morale:
+          title: Morale
+          nullable: true
+          type: integer
+        injured:
+          title: Injured
+          nullable: true
+          type: integer
+        injury_id:
+          title: Injury Id
+          nullable: true
+          type: integer
+        wages:
+          title: Wages
+          nullable: true
+          type: integer
+        contract:
+          title: Contract
+          nullable: true
+          type: integer
+        form:
+          title: Form
+          nullable: true
+          type: string
+        position:
+          title: Position
+          nullable: true
+          type: integer
+        multi_position:
+          title: Multi Position
+          nullable: true
+          type: integer
+        positions:
+          title: Positions
+          default: []
+          nullable: true
+          items:
+            type: string
+          type: array
+        rating:
+          title: Rating
+          nullable: true
+          type: integer
+        rating_gk:
+          title: Rating Gk
+          nullable: true
+          type: integer
+        rating_tackling:
+          title: Rating Tackling
+          nullable: true
+          type: integer
+        rating_passing:
+          title: Rating Passing
+          nullable: true
+          type: integer
+        rating_shooting:
+          title: Rating Shooting
+          nullable: true
+          type: integer
+        rating_stamina:
+          title: Rating Stamina
+          nullable: true
+          type: integer
+        banned:
+          title: Banned
+          nullable: true
+          type: integer
+        cup_tied:
+          title: Cup Tied
+          nullable: true
+          type: integer
+        yellow_cards:
+          title: Yellow Cards
+          nullable: true
+          type: integer
+        red_cards:
+          title: Red Cards
+          nullable: true
+          type: integer
+        dob:
+          title: Dob
+          nullable: true
+          type: integer
+        side:
+          title: Side
+          nullable: true
+          type: string
+        value:
+          title: Value
+          nullable: true
+          type: integer
+        country_id:
+          title: Country Id
+          nullable: true
+          type: string
+        club_id:
+          title: Club Id
+          nullable: true
+          type: integer
+        agent_name:
+          title: Agent Name
+          nullable: true
+          type: string
+        desired_contract:
+          title: Desired Contract
+          nullable: true
+          type: integer
+        allow_transfer:
+          title: Allow Transfer
+          nullable: true
+          type: integer
+        allow_renew:
+          title: Allow Renew
+          nullable: true
+          type: integer
+        age:
+          title: Age
+          nullable: true
+          type: integer
+        last_price:
+          type: integer
+          title: Last Price
+          default: 0
+        volume_1_day:
+          type: integer
+          title: Volume 1 Day
+          default: 0
+        volume_7_day:
+          type: integer
+          title: Volume 7 Day
+          default: 0
+        last_7days:
+          title: Last 7Days
+          nullable: true
+          items:
+            type: integer
+          type: array
+        last_7days_price:
+          title: Last 7Days Price
+          nullable: true
+          items:
+            type: integer
+          type: array
+        profile_pic:
+          title: Profile Pic
+          nullable: true
+          type: string
+      type: object
+      required:
+      - player_id
+      - fitness
+      - retired
+      - morale
+      - injured
+      - injury_id
+      - wages
+      - contract
+      - form
+      - position
+      - multi_position
+      - rating
+      - rating_gk
+      - rating_tackling
+      - rating_passing
+      - rating_shooting
+      - rating_stamina
+      - banned
+      - cup_tied
+      - yellow_cards
+      - red_cards
+      - dob
+      - side
+      - value
+      - country_id
+      - club_id
+      - agent_name
+      - desired_contract
+      - allow_transfer
+      - allow_renew
+      - age
+      title: PlayerDetailedResponse
+    PlayerResponse:
+      properties:
+        player_id:
+          type: integer
+          title: Player Id
+        last_price:
+          type: integer
+          title: Last Price
+          default: 0
+        volume_1_day:
+          type: integer
+          title: Volume 1 Day
+          default: 0
+        volume_7_day:
+          type: integer
+          title: Volume 7 Day
+          default: 0
+        last_7days:
+          title: Last 7Days
+          nullable: true
+          items:
+            type: integer
+          type: array
+        last_7days_price:
+          title: Last 7Days Price
+          nullable: true
+          items:
+            type: integer
+          type: array
+        wages:
+          title: Wages
+          nullable: true
+          type: integer
+        multi_position:
+          title: Multi Position
+          nullable: true
+          type: integer
+        positions:
+          title: Positions
+          default: []
+          nullable: true
+          items:
+            type: string
+          type: array
+        rating:
+          title: Rating
+          nullable: true
+          type: integer
+        country_id:
+          title: Country Id
+          nullable: true
+          type: string
+        dob:
+          title: Dob
+          nullable: true
+          type: integer
+        value:
+          title: Value
+          nullable: true
+          type: integer
+        club_id:
+          title: Club Id
+          nullable: true
+          type: integer
+        agent_name:
+          title: Agent Name
+          nullable: true
+          type: string
+        age:
+          title: Age
+          nullable: true
+          type: integer
+        profile_pic:
+          title: Profile Pic
+          nullable: true
+          type: string
+      type: object
+      required:
+      - player_id
+      - wages
+      - multi_position
+      - rating
+      - country_id
+      - dob
+      - value
+      - club_id
+      - agent_name
+      - age
+      title: PlayerResponse
+    PlayersSortBy:
+      type: string
+      enum:
+      - player_id
+      - last_price
+      - volume_1_day
+      - volume_7_day
+      - wages
+      - rating
+      - country_id
+      - dob
+      - value
+      - club_id
+      - agent_name
+      title: PlayersSortBy
+    RichListResponse:
+      properties:
+        name:
+          type: string
+          title: Name
+        balance:
+          type: integer
+          title: Balance
+        club_asset_value:
+          type: integer
+          title: Club Asset Value
+        player_asset_value:
+          type: integer
+          title: Player Asset Value
+        total_networth:
+          type: integer
+          title: Total Networth
+        rank:
+          type: integer
+          title: Rank
+        profile_pic:
+          title: Profile Pic
+          nullable: true
+          type: string
+      type: object
+      required:
+      - name
+      - balance
+      - club_asset_value
+      - player_asset_value
+      - total_networth
+      - rank
+      title: RichListResponse
+    RichListSortBy:
+      type: string
+      enum:
+      - balance
+      - total_networth
+      title: RichListSortBy
+    ShareBalancesSortBy:
+      type: string
+      enum:
+      - name
+      - share_type
+      - share_id
+      - num
+      title: ShareBalancesSortBy
+    ShareTradeResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        time:
+          type: string
+          format: date-time
+          title: Time
+        unix_time:
+          type: integer
+          title: Unix Time
+        share_type:
+          type: string
+          title: Share Type
+        share_id:
+          type: integer
+          title: Share Id
+        buyer:
+          title: Buyer
+          nullable: true
+          type: string
+        buyer_profile_pic:
+          title: Buyer Profile Pic
+          nullable: true
+          type: string
+        seller:
+          title: Seller
+          nullable: true
+          type: string
+        seller_profile_pic:
+          title: Seller Profile Pic
+          nullable: true
+          type: string
+        num:
+          type: integer
+          title: Num
+        price:
+          type: integer
+          title: Price
+        market_buy:
+          type: boolean
+          title: Market Buy
+      type: object
+      required:
+      - id
+      - time
+      - unix_time
+      - share_type
+      - share_id
+      - buyer
+      - seller
+      - num
+      - price
+      - market_buy
+      title: ShareTradeResponse
+    TimeRangeEnum:
+      type: string
+      enum:
+      - 1d
+      - 7d
+      - 30d
+      - 90d
+      - 6m
+      - 1y
+      title: TimeRangeEnum
+    TradingGraphDataPoint:
+      properties:
+        timestamp:
+          type: integer
+          title: Timestamp
+        datetime:
+          type: string
+          format: date-time
+          title: Datetime
+        volume:
+          type: integer
+          title: Volume
+        weighted_average_price:
+          type: number
+          title: Weighted Average Price
+      type: object
+      required:
+      - timestamp
+      - datetime
+      - volume
+      - weighted_average_price
+      title: TradingGraphDataPoint
+    TypeAmountEntry:
+      properties:
+        type:
+          type: string
+          title: Type
+        amount:
+          type: integer
+          title: Amount
+      type: object
+      required:
+      - type
+      - amount
+      title: TypeAmountEntry
+    UserActivityResponse:
+      properties:
+        name:
+          type: string
+          title: Name
+        last_active_unix:
+          type: integer
+          title: Last Active Unix
+        first_move:
+          type: integer
+          title: First Move
+        rank:
+          type: integer
+          title: Rank
+        points:
+          type: integer
+          title: Points
+        profile_pic:
+          title: Profile Pic
+          nullable: true
+          type: string
+      type: object
+      required:
+      - name
+      - last_active_unix
+      - first_move
+      - rank
+      - points
+      title: UserActivityResponse
+    UserBalanceSheetResponse:
+      properties:
+        name:
+          type: string
+          title: Name
+        amount:
+          type: integer
+          title: Amount
+        type:
+          type: string
+          title: Type
+        other_name:
+          title: Other Name
+          nullable: true
+          type: string
+        other_type:
+          title: Other Type
+          nullable: true
+          type: string
+        other_id:
+          title: Other Id
+          nullable: true
+          type: integer
+        time:
+          type: string
+          format: date-time
+          title: Time
+        unix_time:
+          type: integer
+          title: Unix Time
+      type: object
+      required:
+      - name
+      - amount
+      - type
+      - time
+      - unix_time
+      title: UserBalanceSheetResponse
+    UserDetailedResponse:
+      properties:
+        name:
+          type: string
+          title: Name
+        balance:
+          title: Balance
+          nullable: true
+          type: integer
+        last_active_unix:
+          title: Last Active Unix
+          nullable: true
+          type: integer
+        last_active:
+          title: Last Active
+          nullable: true
+          type: string
+          format: date-time
+        club_id:
+          title: Club Id
+          nullable: true
+          type: integer
+        profile_pic:
+          title: Profile Pic
+          nullable: true
+          type: string
+        manager_voted:
+          title: Manager Voted
+          nullable: true
+          type: integer
+        buy_volume_1_day:
+          title: Buy Volume 1 Day
+          nullable: true
+          type: integer
+        buy_volume_7_day:
+          title: Buy Volume 7 Day
+          nullable: true
+          type: integer
+        sell_volume_1_day:
+          title: Sell Volume 1 Day
+          nullable: true
+          type: integer
+        sell_volume_7_day:
+          title: Sell Volume 7 Day
+          nullable: true
+          type: integer
+        buy_total_volume:
+          title: Buy Total Volume
+          nullable: true
+          type: integer
+        sell_total_volume:
+          title: Sell Total Volume
+          nullable: true
+          type: integer
+        total_volume:
+          title: Total Volume
+          nullable: true
+          type: integer
+        total_volume_30_day:
+          title: Total Volume 30 Day
+          nullable: true
+          type: integer
+        first_trade_date:
+          title: First Trade Date
+          nullable: true
+          type: integer
+        tenth_trade_date:
+          title: Tenth Trade Date
+          nullable: true
+          type: integer
+        hundredth_trade_date:
+          title: Hundredth Trade Date
+          nullable: true
+          type: integer
+        thousandth_trade_date:
+          title: Thousandth Trade Date
+          nullable: true
+          type: integer
+        biggest_trade:
+          title: Biggest Trade
+          nullable: true
+          type: integer
+        last_7days:
+          title: Last 7Days
+          nullable: true
+          items:
+            type: integer
+          type: array
+        last_30days:
+          title: Last 30Days
+          nullable: true
+          items:
+            type: integer
+          type: array
+      type: object
+      required:
+      - name
+      - balance
+      - last_active_unix
+      - last_active
+      - club_id
+      - buy_volume_1_day
+      - buy_volume_7_day
+      - sell_volume_1_day
+      - sell_volume_7_day
+      - buy_total_volume
+      - sell_total_volume
+      - total_volume
+      - total_volume_30_day
+      - first_trade_date
+      - tenth_trade_date
+      - hundredth_trade_date
+      - thousandth_trade_date
+      - biggest_trade
+      - last_7days
+      - last_30days
+      title: UserDetailedResponse
+    UserResponse:
+      properties:
+        name:
+          type: string
+          title: Name
+        balance:
+          title: Balance
+          nullable: true
+          type: integer
+        last_active_unix:
+          title: Last Active Unix
+          nullable: true
+          type: integer
+        last_active:
+          title: Last Active
+          nullable: true
+          type: string
+          format: date-time
+        club_id:
+          title: Club Id
+          nullable: true
+          type: integer
+        profile_pic:
+          title: Profile Pic
+          nullable: true
+          type: string
+        manager_voted:
+          title: Manager Voted
+          nullable: true
+          type: integer
+      type: object
+      required:
+      - name
+      - balance
+      - last_active_unix
+      - last_active
+      - club_id
+      title: UserResponse
+    UserWeeklyBalanceSheetResponse:
+      properties:
+        name:
+          type: string
+          title: Name
+        week_start_unix_time:
+          type: integer
+          title: Week Start Unix Time
+        week_end_unix_time:
+          type: integer
+          title: Week End Unix Time
+        totals:
+          items:
+            $ref: '#/components/schemas/TypeAmountEntry'
+          type: array
+          title: Totals
+      type: object
+      required:
+      - name
+      - week_start_unix_time
+      - week_end_unix_time
+      - totals
+      title: UserWeeklyBalanceSheetResponse
+    UsersDetailedSortBy:
+      type: string
+      enum:
+      - name
+      - balance
+      - last_active_unix
+      - club_id
+      - buy_volume_1_day
+      - buy_volume_7_day
+      - sell_volume_1_day
+      - sell_volume_7_day
+      - buy_total_volume
+      - sell_total_volume
+      - total_volume
+      - total_volume_30_day
+      - first_trade_date
+      - 10th_trade_date
+      - 100th_trade_date
+      - 1000th_trade_date
+      - biggest_trade
+      - manager_voted
+      title: UsersDetailedSortBy
+    UsersSortBy:
+      type: string
+      enum:
+      - name
+      - balance
+      - last_active_unix
+      - club_id
+      - manager_voted
+      title: UsersSortBy
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+servers:
+- url: http://10.0.5.215:8080

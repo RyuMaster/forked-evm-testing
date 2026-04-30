@@ -1,0 +1,12 @@
+{
+  "namespace": "xaya",
+  "table_name": "moves",
+  "description": "A move operation done on Xaya",
+  "is_private": false,
+  "schema": [
+    {"name": "id", "type": "varchar"},
+    {"name": "timestamp", "type": "timestamp"},
+    {"name": "txid", "type": "varchar"},
+    {"name": "name", "type": "varchar"}
+  ]
+}

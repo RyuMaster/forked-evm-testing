@@ -1,0 +1,81 @@
+specVersion: 0.0.5
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: Democrit
+    # Network and source are just dummy values here (corresponding to
+    # the first test deployment made of a Democrit contract).  This
+    # subgraph is not meant to be directly deployed, but just used for
+    # development and deployed as part of a project using Democrit.
+    network: mumbai
+    source:
+      address: "0xE00B1A45A7CBbb32eE387cB6d3eC0E8d078041B8"
+      abi: Democrit
+      startBlock: 35021271
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Trade
+        - SellOrder
+      abis:
+        - name: Democrit
+          file: ./abis/Democrit.json
+      eventHandlers:
+        - event: Trade(string,uint256,uint256,string,string)
+          handler: handleTrade
+        - event: SellOrderCreated(uint256,uint256,address,string,string,uint256,uint256)
+          handler: handleSellOrderCreated
+        - event: SellOrderUpdated(uint256,uint256,uint256)
+          handler: handleSellOrderUpdated
+        - event: SellOrderRemoved(uint256)
+          handler: handleSellOrderRemoved
+        - event: PoolCreated(uint256,string,string,string,uint256,uint64)
+          handler: handlePoolCreated
+        - event: PoolUpdated(uint256,uint256)
+          handler: handlePoolUpdated
+        - event: PoolRemoved(uint256)
+          handler: handlePoolRemoved
+        - event: SellDepositCreated(uint256,string,string,uint256)
+          handler: handleDepositCreated
+        - event: SellDepositUpdated(uint256,uint256)
+          handler: handleDepositUpdated
+        - event: SellDepositRemoved(uint256)
+          handler: handleDepositRemoved
+        - event: BuyOrderCreated(uint256,uint256,address,string,string,uint256,uint256)
+          handler: handleBuyOrderCreated
+        - event: BuyOrderUpdated(uint256,uint256,uint256)
+          handler: handleBuyOrderUpdated
+        - event: BuyOrderRemoved(uint256)
+          handler: handleBuyOrderRemoved
+      file: ./src/democrit.ts
+  - kind: ethereum
+    name: VaultManager
+    # Network and source are just dummy values here (corresponding to
+    # the first test deployment made of a VaultManager contract).  This
+    # subgraph is not meant to be directly deployed, but just used for
+    # development and deployed as part of a project using Democrit.
+    network: mumbai
+    source:
+      address: "0x13Dd3054C59f7ee4f0328062d29D0009bE142f58"
+      abi: VaultManager
+      startBlock: 35021271
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+      abis:
+        - name: VaultManager
+          file: ./abis/VaultManager.json
+      eventHandlers:
+        - event: VaultCreated(string,uint256,string,string,uint256)
+          handler: handleVaultCreated
+        - event: VaultChanged(string,uint256,string,uint256)
+          handler: handleVaultChanged
+        - event: VaultEmptied(string,uint256)
+          handler: handleVaultEmptied
+      file: ./src/democrit.ts
