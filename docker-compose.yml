@@ -114,8 +114,9 @@ services:
       retries: 10
 
   datacentre-updater:
-    image: ${DATACENTRE_UPDATER_IMAGE}
-    entrypoint: ["/bin/bash", "-c", "sed -i \"s/utf8mb4_0900_bin/utf8mb4_bin/g\" db_manager.py && python main.py"]
+    build:
+      context: ./datacentre_updater
+      dockerfile: docker/Dockerfile
     environment:
       SOURCE_DB_HOST: mariadb
       SOURCE_DB_USER: root
@@ -125,10 +126,20 @@ services:
       DEST_DB_USER: root
       DEST_DB_PASSWORD: gsparchival
       DEST_DB_NAME: datacentre
+      BIGQUERY_DB_HOST: mariadb
+      BIGQUERY_DB_USER: root
+      BIGQUERY_DB_PASSWORD: gsparchival
+      BIGQUERY_DB_NAME: bigquery_local
       SQLITE_PATH: /xayagame/sv/polygon/storage.sqlite
-      GAME_ID: sv
+      DATAPACK_URL: https://downloads.soccerverse.com/svpack/default.json
+      DUMP_OUTPUT_FOLDER: /dumps
+      GAME_ID: ${GAME_ID:-sv}
+      SVC_POLYGON_SUBGRAPH_URL: http://graph-node:8000/subgraphs/name/democrit
+      POLYGON_STATS_SUBGRAPH_URL: http://graph-node:8000/subgraphs/name/stats
+      SV_SUBGRAPH_URL: http://graph-node:8000/subgraphs/name/sv
     volumes:
       - gspdata:/xayagame:ro
+      - datadumps:/dumps
     depends_on:
       mariadb:
         condition: service_healthy
@@ -169,3 +180,4 @@ services:
 volumes:
   gspdata:
   mariadb_data:
+  datadumps:
