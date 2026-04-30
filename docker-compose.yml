@@ -230,6 +230,7 @@ services:
     build:
       context: ./datacentre_api
       dockerfile: docker/Dockerfile
+    entrypoint: ["sh", "-c", "set -a; . /shared/graph_hashes.env; set +a; exec python3 main.py"]
     environment:
       MYSQL_HOST: mariadb
       MYSQL_PORT: "3306"
@@ -264,6 +265,7 @@ services:
     volumes:
       - gspdata:/xayagame:ro
       - datadumps:/dumps:ro
+      - graph_hashes_shared:/shared:ro
     depends_on:
       mariadb:
         condition: service_healthy
@@ -273,6 +275,8 @@ services:
         condition: service_healthy
       graph-postgres:
         condition: service_healthy
+      subgraph-deploy:
+        condition: service_completed_successfully
     restart: on-failure
 
 volumes:
