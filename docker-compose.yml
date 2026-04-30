@@ -143,6 +143,30 @@ services:
       retries: 10
       start_period: 20s
 
+  graph-node:
+    image: graphprotocol/graph-node:latest
+    environment:
+      postgres_host: graph-postgres
+      postgres_user: graph-node
+      postgres_pass: graph-node
+      postgres_db: graph-node
+      ipfs: "ipfs:5001"
+      ethereum: "matic:http://nginx/chain"
+      GRAPH_LOG: info
+      RUST_LOG: info
+    stop_grace_period: 10s
+    depends_on:
+      graph-postgres:
+        condition: service_healthy
+      ipfs:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8030/graphql -H 'content-type: application/json' --post-data '{\"query\":\"{indexingStatuses{subgraph}}\"}' >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
   healthcheck_xayax:
     build:
       context: ./healthcheck
