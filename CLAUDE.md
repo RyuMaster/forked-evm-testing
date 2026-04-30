@@ -58,20 +58,20 @@ datacentre-updater     ← mariadb + gsp-init + subgraph-deploy
 datacentre-api         ← mariadb + redis + graph-postgres + gsp-init + subgraph-deploy
 ```
 
-### Vendored sources (built into images by the operator, not at deploy time)
+### Sources
 
 ```
 forked-evm-testing/
-├── datacentre_api/        snapshot of upstream FastAPI service
-├── datacentre_updater/    snapshot of upstream updater (with build-time collation patch)
-├── subgraphs/
+├── subgraphs/             bind-mounted into subgraph-deploy at runtime
 │   ├── stats/             xaya-stats subgraph
 │   ├── sv/                sv-subgraph
 │   └── democrit/          democrit-sv subgraph (placeholder ABIs — see POPULATE_ABIS.md)
-└── subgraph-deploy/       Dockerfile + deploy.sh for the one-shot deployer
+└── subgraph-deploy/       Dockerfile + deploy.sh for the one-shot deployer (built into ${SUBGRAPH_DEPLOY_IMAGE})
 ```
 
-Re-syncing from upstream (`C:\WorkFiles\datacentre_api`, `C:\WorkFiles\stats-subgraph`, etc.) is a manual `cp -r`. The vendored copies are the source of truth for the images the operator builds.
+`datacentre-api` and `datacentre-updater` are NOT vendored in this repo. Their sources live in separate upstream repos at `C:\WorkFiles\datacentre_api` and `C:\WorkFiles\datacentre_updater`; build the `${DATACENTRE_API_IMAGE}` / `${DATACENTRE_UPDATER_IMAGE}` images directly from there (see "Building images" below). The `datacentre_updater` upstream Dockerfile must include the build-time `utf8mb4_0900_bin` → `utf8mb4_bin` sed patch on `db_manager.py`; if your image doesn't have it, the compose entrypoint applies it at runtime as a fallback.
+
+`subgraphs/{stats,sv,democrit}/` ARE vendored because they're bind-mounted into `subgraph-deploy` at runtime (`graph codegen` + `graph build` run inside the container against these files). Re-sync from upstream (`C:\WorkFiles\stats-subgraph`, `C:\WorkFiles\subgraph`, `C:\WorkFiles\democrit-evm\subgraph`) is a manual `cp -r`.
 
 ### Internal networking
 
@@ -110,20 +110,23 @@ All other configuration (Redis URL, Graph Postgres credentials, BigQuery local D
 
 ## Building images
 
-The three pre-built images come from the vendored sources. Build from the repo root, tag for your registry, then push:
+Two of the three image sources live in separate upstream repos; one (`subgraph-deploy`) is in this repo.
 
 ```bash
-# datacentre-api
+# datacentre-api — built from the upstream repo (NOT vendored here)
+cd /c/WorkFiles/datacentre_api
 docker build -t YOUR_REGISTRY/datacentre-api:VERSION \
-  -f datacentre_api/docker/Dockerfile datacentre_api
+  -f docker/Dockerfile .
 docker push YOUR_REGISTRY/datacentre-api:VERSION
 
-# datacentre-updater
+# datacentre-updater — built from the upstream repo (NOT vendored here)
+cd /c/WorkFiles/datacentre_updater
 docker build -t YOUR_REGISTRY/datacentre-updater:VERSION \
-  -f datacentre_updater/docker/Dockerfile datacentre_updater
+  -f docker/Dockerfile .
 docker push YOUR_REGISTRY/datacentre-updater:VERSION
 
-# subgraph-deploy
+# subgraph-deploy — built from this repo
+cd /c/WorkFiles/forked-evm-testing
 docker build -t YOUR_REGISTRY/subgraph-deploy:VERSION subgraph-deploy
 docker push YOUR_REGISTRY/subgraph-deploy:VERSION
 ```

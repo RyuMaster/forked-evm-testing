@@ -1,7 +1,0 @@
-mysql-connector-python==8.3.0
-python-dotenv==1.0.1
-requests
-requests-toolbelt
-tqdm==4.66.4
-web3==7.7.0
-gql[requests]
