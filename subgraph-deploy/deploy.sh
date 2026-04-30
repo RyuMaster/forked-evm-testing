@@ -22,11 +22,11 @@ deploy_one() {
 
   echo "=== Deploying ${name} from ${src} ==="
 
-  # Skip if any ABI under abis/ contains the placeholder marker. This lets the
-  # democrit subgraph ship with placeholder ABIs (see subgraphs/democrit/POPULATE_ABIS.md)
-  # without breaking the rest of the stack. Operator populates real ABIs and
-  # re-deploys to bring the subgraph online.
-  if [ -d "${src}/abis" ] && grep -l _DATACENTRE_STACK_PLACEHOLDER "${src}/abis/"*.json >/dev/null 2>&1; then
+  # Skip if any ABI file (in either abi/ or abis/) contains the placeholder marker.
+  # This lets the democrit subgraph ship with placeholder ABIs (see
+  # subgraphs/democrit/POPULATE_ABIS.md) without breaking the rest of the stack.
+  # Subgraph layouts vary: stats uses abi/, sv and democrit use abis/.
+  if grep -lq _DATACENTRE_STACK_PLACEHOLDER "${src}/abi/"*.json "${src}/abis/"*.json 2>/dev/null; then
     echo "WARNING: ${name} has placeholder ABIs — skipping deploy."
     echo "         See ${src}/POPULATE_ABIS.md to populate real ABIs."
     return 0
@@ -42,8 +42,20 @@ deploy_one() {
   npx graph codegen
   npx graph build
 
-  # Idempotent — if already created, graph-cli prints a warning and exits non-zero.
-  npx graph create --node "${GRAPH_ADMIN_URL}" "${name}" || true
+  # Idempotent — graph create exits non-zero if the subgraph already exists.
+  # Swallow only that specific error; let any other failure abort.
+  if ! create_err=$(npx graph create --node "${GRAPH_ADMIN_URL}" "${name}" 2>&1); then
+    case "${create_err}" in
+      *"already exists"*|*"name not available"*)
+        echo "graph create: ${name} already exists, continuing."
+        ;;
+      *)
+        echo "graph create failed for ${name}:" >&2
+        echo "${create_err}" >&2
+        exit 1
+        ;;
+    esac
+  fi
 
   npx graph deploy \
     --node "${GRAPH_ADMIN_URL}" \
