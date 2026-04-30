@@ -781,6 +781,16 @@ deploy_one() {
 
   echo "=== Deploying ${name} from ${src} ==="
 
+  # Skip if any ABI under abis/ contains the placeholder marker. This lets the
+  # democrit subgraph ship with placeholder ABIs (see subgraphs/democrit/POPULATE_ABIS.md)
+  # without breaking the rest of the stack. Operator populates real ABIs and
+  # re-deploys to bring the subgraph online.
+  if [ -d "${src}/abis" ] && grep -l _DATACENTRE_STACK_PLACEHOLDER "${src}/abis/"*.json >/dev/null 2>&1; then
+    echo "WARNING: ${name} has placeholder ABIs — skipping deploy."
+    echo "         See ${src}/POPULATE_ABIS.md to populate real ABIs."
+    return 0
+  fi
+
   # Subgraph dirs are mounted read-only; copy to writable scratch.
   rm -rf "/work/${name}"
   cp -r "${src}" "/work/${name}"
