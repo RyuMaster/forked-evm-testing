@@ -168,8 +168,7 @@ services:
       start_period: 30s
 
   subgraph-deploy:
-    build:
-      context: ./subgraph-deploy
+    image: ${SUBGRAPH_DEPLOY_IMAGE}
     volumes:
       - ./subgraphs/stats:/subgraphs/stats:ro
       - ./subgraphs/sv:/subgraphs/sv:ro
@@ -191,9 +190,8 @@ services:
       retries: 10
 
   datacentre-updater:
-    build:
-      context: ./datacentre_updater
-      dockerfile: docker/Dockerfile
+    image: ${DATACENTRE_UPDATER_IMAGE}
+    entrypoint: ["/bin/bash", "-c", "sed -i \"s/utf8mb4_0900_bin/utf8mb4_bin/g\" db_manager.py && python main.py"]
     environment:
       SOURCE_DB_HOST: mariadb
       SOURCE_DB_USER: root
@@ -227,9 +225,7 @@ services:
     restart: on-failure
 
   datacentre-api:
-    build:
-      context: ./datacentre_api
-      dockerfile: docker/Dockerfile
+    image: ${DATACENTRE_API_IMAGE}
     entrypoint: ["sh", "-c", "set -a; . /shared/graph_hashes.env; set +a; exec python3 main.py"]
     environment:
       MYSQL_HOST: mariadb
