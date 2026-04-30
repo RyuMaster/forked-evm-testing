@@ -167,6 +167,19 @@ services:
       retries: 30
       start_period: 30s
 
+  subgraph-deploy:
+    build:
+      context: ./subgraph-deploy
+    volumes:
+      - ./subgraphs/stats:/subgraphs/stats:ro
+      - ./subgraphs/sv:/subgraphs/sv:ro
+      - ./subgraphs/democrit:/subgraphs/democrit:ro
+      - graph_hashes_shared:/shared
+    depends_on:
+      graph-node:
+        condition: service_healthy
+    restart: "no"
+
   healthcheck_xayax:
     build:
       context: ./healthcheck
@@ -208,6 +221,8 @@ services:
       mariadb:
         condition: service_healthy
       gsp-init:
+        condition: service_completed_successfully
+      subgraph-deploy:
         condition: service_completed_successfully
     restart: on-failure
 
@@ -267,3 +282,4 @@ volumes:
   redis_data:
   graph_postgres_data:
   ipfs_data:
+  graph_hashes_shared:
