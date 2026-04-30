@@ -148,7 +148,9 @@ services:
     restart: on-failure
 
   datacentre-api:
-    image: ${DATACENTRE_API_IMAGE}
+    build:
+      context: ./datacentre_api
+      dockerfile: docker/Dockerfile
     environment:
       MYSQL_HOST: mariadb
       MYSQL_PORT: "3306"
@@ -167,9 +169,22 @@ services:
       USERCONFIG_DB: userconfig
       SQLITE_DB_PATH: /xayagame/sv/polygon/storage.sqlite
       ROOT_PATH: /api
-      GAME_ID: sv
+      GAME_ID: ${GAME_ID:-sv}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_DB: "0"
+      REDIS_PASSWORD: ""
+      GRAPH_POSTGRES_HOST: graph-postgres
+      GRAPH_POSTGRES_PORT: "5432"
+      GRAPH_POSTGRES_USER: graph-node
+      GRAPH_POSTGRES_PASSWORD: graph-node
+      GRAPH_POSTGRES_DB: graph-node
+      GRAPH_SUBGRAPH_SV_URL: http://graph-node:8000/subgraphs/name/sv
+      DEFAULT_PROFILE_PIC_URL: https://downloads.soccerverse.com/default_profile.jpg
+      DUMP_OUTPUT_FOLDER: /dumps
     volumes:
       - gspdata:/xayagame:ro
+      - datadumps:/dumps:ro
     depends_on:
       mariadb:
         condition: service_healthy
