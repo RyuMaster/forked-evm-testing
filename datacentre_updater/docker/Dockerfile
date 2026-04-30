@@ -23,6 +23,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy rest of the files
 COPY --chown=python-user:python-user . .
 
+# Patch upstream collation that MariaDB rejects.
+# See docs/superpowers/specs/2026-04-30-datacentre-stack-design.md
+RUN sed -i 's/utf8mb4_0900_bin/utf8mb4_bin/g' db_manager.py
+
 # Update perms and switch user to non-root before starting the app
 RUN chown -R python-user:python-user /usr/src/app
 USER python-user
