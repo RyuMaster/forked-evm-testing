@@ -1,0 +1,22 @@
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+
+  - name: MariaDB-datacentre
+    type: mysql
+    uid: mariadb-datacentre
+    url: mariadb:3306
+    database: datacentre
+    user: ${DC_MARIADB_USER}
+    jsonData:
+      maxOpenConns: 10
+      maxIdleConns: 2
+    secureJsonData:
+      password: ${DC_MARIADB_PASSWORD}
+    editable: false
