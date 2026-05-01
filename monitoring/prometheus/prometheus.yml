@@ -1,0 +1,10 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: datacentre-api
+    static_configs:
+      - targets: ['datacentre-api:9100']
+    metrics_path: /metrics
+    scrape_interval: 15s

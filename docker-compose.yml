@@ -237,6 +237,19 @@ services:
         condition: service_completed_successfully
     restart: on-failure
 
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=270d
+      - --storage.tsdb.path=/prometheus
+    # Internal-only: no host port. Grafana reaches this via the docker network.
+
   datacentre-api:
     image: ${DATACENTRE_API_IMAGE}
     entrypoint: ["sh", "-c", "set -a; . /shared/graph_hashes.env; set +a; exec python3 main.py"]
@@ -296,3 +309,4 @@ volumes:
   graph_postgres_data:
   ipfs_data:
   graph_hashes_shared:
+  prometheus_data:
