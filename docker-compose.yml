@@ -250,6 +250,29 @@ services:
       - --storage.tsdb.path=/prometheus
     # Internal-only: no host port. Grafana reaches this via the docker network.
 
+  grafana:
+    image: grafana/grafana:11.3.1
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      DC_MARIADB_USER: ${MARIADB_USER}
+      DC_MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+    depends_on:
+      prometheus:
+        condition: service_started
+      mariadb:
+        condition: service_healthy
+
   datacentre-api:
     image: ${DATACENTRE_API_IMAGE}
     entrypoint: ["sh", "-c", "set -a; . /shared/graph_hashes.env; set +a; exec python3 main.py"]
@@ -310,3 +333,4 @@ volumes:
   ipfs_data:
   graph_hashes_shared:
   prometheus_data:
+  grafana_data:
