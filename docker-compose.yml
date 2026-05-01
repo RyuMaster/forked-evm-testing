@@ -172,7 +172,7 @@ services:
     volumes:
       - ./subgraphs/stats:/subgraphs/stats:ro
       - ./subgraphs/sv:/subgraphs/sv:ro
-      - ./subgraphs/democrit:/subgraphs/democrit:ro
+      - ./subgraphs/democrit:/subgraphs/democrit
       # Operator-supplied real ABIs override the in-repo placeholders. When
       # both env vars point at real forge artefacts, the placeholder marker
       # is gone and democrit deploys; otherwise deploy.sh skips it.
