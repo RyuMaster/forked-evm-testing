@@ -15,6 +15,21 @@ mkdir -p "${SHARED_DIR}"
 export PGPASSWORD=graph-node
 PG="psql -h graph-postgres -U graph-node -d graph-node -tAq"
 
+# Apply operator-supplied democrit ABI overrides if present.
+# /abis-override/{Democrit,VaultManager}.json are bind-mounted from
+# DEMOCRIT_ABI_PATH / VAULTMANAGER_ABI_PATH when those env vars are set.
+# When unset, the compose default binds /dev/null, which appears as a
+# character device — [ -f ] filters those out so we don't overwrite the
+# baked-in placeholders with garbage.
+override_dir=/abis-override
+for f in Democrit VaultManager; do
+  src="${override_dir}/${f}.json"
+  if [ -f "${src}" ] && [ -s "${src}" ] && ! grep -q "_DATACENTRE_STACK_PLACEHOLDER" "${src}"; then
+    cp -f "${src}" "/subgraphs/democrit/abis/${f}.json"
+    echo "Applied operator override: ${f}.json"
+  fi
+done
+
 deploy_one() {
   name=$1
   src=$2

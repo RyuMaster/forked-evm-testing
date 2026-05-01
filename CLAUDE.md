@@ -126,11 +126,16 @@ docker build -t YOUR_REGISTRY/datacentre-updater:VERSION \
   -f docker/Dockerfile .
 docker push YOUR_REGISTRY/datacentre-updater:VERSION
 
-# subgraph-deploy — built from this repo
+# subgraph-deploy — built from this repo. Build context MUST be the repo
+# root (not subgraph-deploy/) because the subgraph sources are baked into
+# the image (so the stack works on Portainer agents that don't clone the
+# repo to the host filesystem).
 cd /c/WorkFiles/forked-evm-testing
-docker build -t YOUR_REGISTRY/subgraph-deploy:VERSION subgraph-deploy
+docker build -f subgraph-deploy/Dockerfile -t YOUR_REGISTRY/subgraph-deploy:VERSION .
 docker push YOUR_REGISTRY/subgraph-deploy:VERSION
 ```
+
+When subgraph sources change (`subgraphs/{stats,sv,democrit}/`), rebuild and push the `subgraph-deploy` image — there is no longer a bind mount, so changes only take effect after a new image is pulled.
 
 Then set the matching `*_IMAGE` env vars in `.env`. Re-running `docker compose up -d` pulls the new images.
 
@@ -139,7 +144,8 @@ Then set the matching `*_IMAGE` env vars in `.env`. Re-running `docker compose u
 - **First start is slow.** `mariadb` archival import + graph-node indexing both take time. Healthcheck `start_period` for mariadb is 30 minutes; for graph-node it's just service-up (indexing happens in the background).
 - **`gsp-init` schema migrations are idempotent** (`2>/dev/null || true`). Add new ALTERs in the same pattern.
 - **`subgraph-deploy` is idempotent.** Re-running on unchanged sources is fast — graph-cli detects unchanged manifests. The deploy script overwrites `/shared/graph_hashes.env` each run.
-- **democrit subgraph ships with placeholder ABIs.** Real ABIs require `forge build` of the upstream `democrit-evm` repo — see `subgraphs/democrit/POPULATE_ABIS.md`. Until populated, `subgraph-deploy` skips democrit (logs a warning) and the stack still boots cleanly; only the trade-history subgraph endpoints used by `datacentre-updater` (via `SVC_POLYGON_SUBGRAPH_URL`) are unavailable.
+- **Subgraph sources are baked into the image.** They are NOT bind-mounted from the host. This is intentional: Portainer agents in some configurations don't clone the git repo to the host, so bind mounts pointing at `./subgraphs/...` resolve to empty dirs (Docker silently auto-creates missing bind sources). To update subgraph sources, rebuild and push `${SUBGRAPH_DEPLOY_IMAGE}` per the "Building images" section.
+- **democrit subgraph ships with placeholder ABIs baked in.** Real ABIs require `forge build` of the upstream `democrit-evm` repo. Operator supplies host paths via `DEMOCRIT_ABI_PATH` / `VAULTMANAGER_ABI_PATH`; deploy.sh copies them over the placeholders at runtime. When unset, the placeholders stay in place and democrit is skipped (logs a warning); the stack still boots cleanly. See `subgraphs/democrit/POPULATE_ABIS.md`.
 - **Collation patch:** `datacentre-updater`'s compose entrypoint runs `sed -i 's/utf8mb4_0900_bin/utf8mb4_bin/g' db_manager.py` at every container start (idempotent — once patched, sed matches nothing). The vendored `datacentre_updater/docker/Dockerfile` also applies the patch at build time, so anyone re-rolling the image from source gets it baked in.
 - **Editing `proxy.conf.template`:** the file is rendered through `envsubst` with the explicit allowlist `$BLOCKCHAIN_RPC_URL $BLOCKCHAIN_AUTH_HEADER` in `nginx/entrypoint.sh`. Any new env var referenced in the template must be added to that allowlist.
 - **Stack memory footprint:** ~6-8 GB RAM during indexing. Postgres + graph-node + mariadb dominate.
