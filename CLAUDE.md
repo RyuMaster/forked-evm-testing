@@ -44,6 +44,8 @@ docker compose build nginx
 - **`datacentre-updater`** — `${DATACENTRE_UPDATER_IMAGE}`. Reads SQLite + MariaDB; writes MariaDB (`datacentre`, `bigquery_local`) and the shared `datadumps` volume. Compose entrypoint applies the `utf8mb4_0900_bin` → `utf8mb4_bin` collation patch at runtime via `sed -i db_manager.py` (also applied at build time inside the vendored `Dockerfile`, so the patch is no-op-safe if your image already includes it).
 - **`datacentre-api`** — `${DATACENTRE_API_IMAGE}`. FastAPI behind Gunicorn. Entrypoint sources `/shared/graph_hashes.env` (auto-exported via `set -a`) before starting Python so `lookup_subgraph_schemas()` resolves locally-deployed subgraph hashes against `graph-postgres`.
 - **`healthcheck_xayax`** — sidecar, checks `xayax:8000` reachable.
+- **`prometheus`** — `prom/prometheus:v2.55.1`, internal-only TSDB. Scrapes `datacentre-api:9100/metrics` every 15 s. 270-day retention. Volume `prometheus_data`.
+- **`grafana`** — `grafana/grafana:11.3.1`, host-published on `${GRAFANA_PORT:-3000}`. Datasources (Prometheus + `MariaDB-datacentre`) and the "API Performance" dashboard auto-provisioned from `./monitoring/grafana/`. Default credentials `admin / ${GRAFANA_ADMIN_PASSWORD:-admin}`. Volume `grafana_data`.
 
 ### Service dependency chain
 
@@ -150,3 +152,15 @@ Then set the matching `*_IMAGE` env vars in `.env`. Re-running `docker compose u
 - **Editing `proxy.conf.template`:** the file is rendered through `envsubst` with the explicit allowlist `$BLOCKCHAIN_RPC_URL $BLOCKCHAIN_AUTH_HEADER` in `nginx/entrypoint.sh`. Any new env var referenced in the template must be added to that allowlist.
 - **Stack memory footprint:** ~6-8 GB RAM during indexing. Postgres + graph-node + mariadb dominate.
 - **Legacy directories**: `basechain/` and `helper/` remain in the tree from the original Anvil-fork design but are no longer wired into compose. Treat as inert unless re-introduced.
+
+## Monitoring
+
+- **Open the dashboard:** `http://localhost:${GRAFANA_PORT:-3000}` → log in with `${GRAFANA_ADMIN_USER}` / `${GRAFANA_ADMIN_PASSWORD}` → "API Performance" folder → "API Performance" dashboard.
+- **No data yet?** Plan 1's frontend recorder needs to be deployed and a browser session must have hit a page to populate `api_request_log`. Row 1 (Prom) panels populate as soon as the beacon endpoint receives any event; Rows 2–4 (MariaDB) need ~1 minute of writes.
+- **Edit the dashboard live, save back to git:** Grafana → dashboard → Settings (gear) → JSON Model → copy the JSON → overwrite `monitoring/grafana/dashboards/api-perf.json` → `docker compose restart grafana` to confirm the file load works → commit.
+- **Wipe history:** `docker compose down -v` removes both `prometheus_data` and `grafana_data` (along with everything else).
+- **Memory footprint:** Prometheus ~200 MB RSS, Grafana ~150 MB. Total stack roughly 6.5–8.5 GB during indexing.
+
+## Privacy
+
+The API performance monitoring captures only operational telemetry — never user content. Each event records: an anonymous browser-session UUID generated client-side and stored in `localStorage` (no link to any real user), the Next.js page-route template, the outbound URL (with query strings and basic-auth userinfo stripped server-side), HTTP method/status, response duration, response `Content-Length`, and a 200-character truncated error message on network failures. The recorder does NOT read request bodies, request headers (including `Authorization`), cookies, response bodies, wallet addresses, or Xaya names. The originating IP is used by the beacon endpoint for rate-limiting only; it is not stored. Retention in MariaDB is 270 days, after which daily partitions are dropped automatically. This data is treated as internal operational telemetry and is not exported. If the public privacy policy enumerates collected data, add an entry mentioning operational performance telemetry consistent with this paragraph.
