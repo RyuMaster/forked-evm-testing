@@ -4,15 +4,14 @@ schema:
 dataSources:
   - kind: ethereum
     name: Democrit
-    # Network and source are just dummy values here (corresponding to
-    # the first test deployment made of a Democrit contract).  This
-    # subgraph is not meant to be directly deployed, but just used for
-    # development and deployed as part of a project using Democrit.
-    network: mumbai
+    # network/address/startBlock are templated — deploy.sh runs envsubst
+    # against this file using DEMOCRIT_* env vars from the deploy host.
+    # When the address vars are unset, democrit is skipped at deploy time.
+    network: ${DEMOCRIT_NETWORK}
     source:
-      address: "0xE00B1A45A7CBbb32eE387cB6d3eC0E8d078041B8"
+      address: "${DEMOCRIT_CONTRACT_ADDRESS}"
       abi: Democrit
-      startBlock: 35021271
+      startBlock: ${DEMOCRIT_START_BLOCK}
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -53,15 +52,12 @@ dataSources:
       file: ./src/democrit.ts
   - kind: ethereum
     name: VaultManager
-    # Network and source are just dummy values here (corresponding to
-    # the first test deployment made of a VaultManager contract).  This
-    # subgraph is not meant to be directly deployed, but just used for
-    # development and deployed as part of a project using Democrit.
-    network: mumbai
+    # See note on Democrit dataSource above — same templating.
+    network: ${DEMOCRIT_NETWORK}
     source:
-      address: "0x13Dd3054C59f7ee4f0328062d29D0009bE142f58"
+      address: "${VAULTMANAGER_CONTRACT_ADDRESS}"
       abi: VaultManager
-      startBlock: 35021271
+      startBlock: ${DEMOCRIT_START_BLOCK}
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7

@@ -47,10 +47,26 @@ deploy_one() {
     return 0
   fi
 
-  # Subgraph dirs are mounted read-only; copy to writable scratch.
+  # democrit's subgraph.yaml is templated. Skip if either contract address
+  # env var is empty — envsubst would produce `address: ""` which graph-cli
+  # rejects.
+  if [ "${name}" = "democrit" ] && { [ -z "${DEMOCRIT_CONTRACT_ADDRESS:-}" ] || [ -z "${VAULTMANAGER_CONTRACT_ADDRESS:-}" ]; }; then
+    echo "WARNING: democrit DEMOCRIT_CONTRACT_ADDRESS or VAULTMANAGER_CONTRACT_ADDRESS not set — skipping deploy."
+    echo "         See ${src}/POPULATE_ABIS.md."
+    return 0
+  fi
+
+  # Copy the baked-in subgraph source to writable scratch so we can rewrite
+  # subgraph.yaml and run npm install / graph build against it.
   rm -rf "/work/${name}"
   cp -r "${src}" "/work/${name}"
   cd "/work/${name}"
+
+  # Render any ${VAR} placeholders in subgraph.yaml using a fixed allowlist.
+  # Only democrit currently uses these, but running on all subgraphs is
+  # idempotent (no-op when the file has no ${VAR} refs).
+  envsubst '${DEMOCRIT_NETWORK} ${DEMOCRIT_CONTRACT_ADDRESS} ${VAULTMANAGER_CONTRACT_ADDRESS} ${DEMOCRIT_START_BLOCK}' < subgraph.yaml > subgraph.yaml.new
+  mv subgraph.yaml.new subgraph.yaml
 
   npm install --omit=dev --no-audit --no-fund
 

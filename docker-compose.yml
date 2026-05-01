@@ -169,6 +169,14 @@ services:
 
   subgraph-deploy:
     image: ${SUBGRAPH_DEPLOY_IMAGE}
+    environment:
+      # democrit subgraph.yaml is templated with these — deploy.sh runs
+      # envsubst before graph build. When the address vars are empty,
+      # deploy.sh skips democrit (the placeholders would not be valid).
+      DEMOCRIT_NETWORK: ${DEMOCRIT_NETWORK:-matic}
+      DEMOCRIT_CONTRACT_ADDRESS: ${DEMOCRIT_CONTRACT_ADDRESS:-}
+      VAULTMANAGER_CONTRACT_ADDRESS: ${VAULTMANAGER_CONTRACT_ADDRESS:-}
+      DEMOCRIT_START_BLOCK: ${DEMOCRIT_START_BLOCK:-0}
     volumes:
       # Subgraph sources are baked into ${SUBGRAPH_DEPLOY_IMAGE} (no bind
       # mount needed). Operator-supplied real democrit ABIs are layered in
