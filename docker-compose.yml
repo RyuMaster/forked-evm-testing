@@ -20,6 +20,8 @@ services:
 
   gsp-init:
     image: alpine
+    environment:
+      FORCE_RESEED: ${FORCE_RESEED:-0}
     volumes:
       - gspdata:/xayagame
       - ${STORAGE_SQLITE_PATH:-./storage.sqlite}:/seed/storage.sqlite:ro
@@ -27,12 +29,12 @@ services:
       - sh
       - -c
       - |
-        if [ ! -f /xayagame/sv/polygon/storage.sqlite ]; then
+        if [ "$$FORCE_RESEED" = "1" ] || [ ! -f /xayagame/sv/polygon/storage.sqlite ]; then
           mkdir -p /xayagame/sv/polygon
           cp /seed/storage.sqlite /xayagame/sv/polygon/storage.sqlite
-          echo 'Seeded storage.sqlite'
+          echo "Seeded storage.sqlite (FORCE_RESEED=$$FORCE_RESEED)"
         else
-          echo 'storage.sqlite already exists, skipping seed'
+          echo 'storage.sqlite already exists, skipping seed (set FORCE_RESEED=1 to overwrite)'
         fi
 
         echo 'Running schema migrations...'
@@ -106,6 +108,8 @@ services:
   redis:
     image: redis:7-alpine
     command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     stop_grace_period: 5s

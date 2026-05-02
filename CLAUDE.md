@@ -77,7 +77,7 @@ forked-evm-testing/
 
 ### Internal networking
 
-Services reference each other by Docker hostname (`http://nginx/chain`, `http://graph-node:8000/subgraphs/name/sv`, `mysql://...@mariadb:3306/...`, `redis://redis:6379`, `graph-postgres:5432`, `ipfs:5001`). Only `nginx` and (optionally) `mariadb` (host port `${MARIADB_PORT}`, default 3307) are reachable from the host.
+Services reference each other by Docker hostname (`http://nginx/chain`, `http://graph-node:8000/subgraphs/name/sv`, `mysql://...@mariadb:3306/...`, `redis://redis:6379`, `graph-postgres:5432`, `ipfs:5001`). From the host, `nginx` (port 8100), `mariadb` (`${MARIADB_PORT}`, default 3307), `redis` (`${REDIS_PORT}`, default 6379), and `grafana` (`${GRAFANA_PORT}`, default 3000) are reachable. Redis is published primarily to let a frontend running outside the Docker network share this stack's cache layer; it has no auth, so treat the LAN as trusted.
 
 ### Boot timing
 
@@ -145,6 +145,7 @@ Then set the matching `*_IMAGE` env vars in `.env`. Re-running `docker compose u
 
 - **First start is slow.** `mariadb` archival import + graph-node indexing both take time. Healthcheck `start_period` for mariadb is 30 minutes; for graph-node it's just service-up (indexing happens in the background).
 - **`gsp-init` schema migrations are idempotent** (`2>/dev/null || true`). Add new ALTERs in the same pattern.
+- **Re-seeding the GSP SQLite snapshot.** `gsp-init` only seeds when `gspdata:/xayagame/sv/polygon/storage.sqlite` is missing — and the named `gspdata` volume survives `docker compose down` and most Portainer redeploys. To force a re-seed from `${STORAGE_SQLITE_PATH}` without manually wiping the volume, set `FORCE_RESEED=1` in `.env` and recreate the affected services: `FORCE_RESEED=1 docker compose up -d --force-recreate gsp-init gsp`. Flip back to `0` afterwards so subsequent restarts don't keep clobbering live GSP state. (Wiping the volume — `docker volume rm <stack>_gspdata` after `docker compose down` — is the equivalent manual path.)
 - **`subgraph-deploy` is idempotent.** Re-running on unchanged sources is fast — graph-cli detects unchanged manifests. The deploy script overwrites `/shared/graph_hashes.env` each run.
 - **Subgraph sources are baked into the image.** They are NOT bind-mounted from the host. This is intentional: Portainer agents in some configurations don't clone the git repo to the host, so bind mounts pointing at `./subgraphs/...` resolve to empty dirs (Docker silently auto-creates missing bind sources). To update subgraph sources, rebuild and push `${SUBGRAPH_DEPLOY_IMAGE}` per the "Building images" section.
 - **democrit subgraph ships with placeholder ABIs baked in.** Real ABIs require `forge build` of the upstream `democrit-evm` repo. Operator supplies host paths via `DEMOCRIT_ABI_PATH` / `VAULTMANAGER_ABI_PATH`; deploy.sh copies them over the placeholders at runtime. When unset, the placeholders stay in place and democrit is skipped (logs a warning); the stack still boots cleanly. See `subgraphs/democrit/POPULATE_ABIS.md`.
