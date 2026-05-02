@@ -77,7 +77,7 @@ forked-evm-testing/
 
 ### Internal networking
 
-Services reference each other by Docker hostname (`http://nginx/chain`, `http://graph-node:8000/subgraphs/name/sv`, `mysql://...@mariadb:3306/...`, `redis://redis:6379`, `graph-postgres:5432`, `ipfs:5001`). From the host, `nginx` (port 8100), `mariadb` (`${MARIADB_PORT}`, default 3307), `redis` (`${REDIS_PORT}`, default 6379), and `grafana` (`${GRAFANA_PORT}`, default 3000) are reachable. Redis is published primarily to let a frontend running outside the Docker network share this stack's cache layer; it has no auth, so treat the LAN as trusted.
+Services reference each other by Docker hostname (`http://nginx/chain`, `http://graph-node:8000/subgraphs/name/sv`, `mysql://...@mariadb:3306/...`, `redis://redis:6379`, `graph-postgres:5432`, `ipfs:5001`). From the host, `nginx` (port 8100), `mariadb` (`${MARIADB_PORT}`, default 3307), `redis` (`${REDIS_PORT}`, default 6380 on the host — alt port to avoid colliding with any pre-existing redis on the host; the container internally still listens on 6379), and `grafana` (`${GRAFANA_PORT}`, default 3000) are reachable. Redis is published primarily to let a frontend running outside the Docker network share this stack's cache layer; it has no auth, so treat the LAN as trusted.
 
 ### Boot timing
 
