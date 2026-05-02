@@ -379,12 +379,12 @@ configs:
           uid: mariadb-datacentre
           url: mariadb:3306
           database: datacentre
-          user: ${DC_MARIADB_USER}
+          user: ${DC_MARIADB_USER:-root}
           jsonData:
             maxOpenConns: 10
             maxIdleConns: 2
           secureJsonData:
-            password: ${DC_MARIADB_PASSWORD}
+            password: ${DC_MARIADB_PASSWORD:-gsparchival}
           editable: false
 
   grafana_dashboards_provider:
