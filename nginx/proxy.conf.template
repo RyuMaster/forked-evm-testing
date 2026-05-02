@@ -30,6 +30,17 @@ server {
       add_header Content-Type                 "text/plain charset=UTF-8";
       return 204;
     }
+    # The upstream GSP daemon also emits Access-Control-Allow-Origin: *
+    # (and a permissive Allow-Headers list). Strip its CORS headers so
+    # only ours reach the browser — otherwise the response carries two
+    # Allow-Origin values and Chrome rejects with "contains multiple
+    # values '*, <origin>', but only one is allowed".
+    proxy_hide_header Access-Control-Allow-Origin;
+    proxy_hide_header Access-Control-Allow-Methods;
+    proxy_hide_header Access-Control-Allow-Headers;
+    proxy_hide_header Access-Control-Allow-Credentials;
+    proxy_hide_header Access-Control-Max-Age;
+
     add_header Access-Control-Allow-Origin "$http_origin" always;
 
     set $upstream http://gsp:8600/;
