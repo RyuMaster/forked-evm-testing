@@ -290,7 +290,12 @@ services:
 
   datacentre-api:
     image: ${DATACENTRE_API_IMAGE}
-    entrypoint: ["sh", "-c", "set -a; . /shared/graph_hashes.env; set +a; exec python3 main.py"]
+    # Gunicorn (1 worker) instead of `python3 main.py` so the master
+    # process serves /metrics on port 9100 (see gunicorn.conf.py),
+    # which Prometheus scrapes for the API Performance dashboard's
+    # Row 1 panels. Uvicorn alone leaves :9100 unbound. -w 1 keeps
+    # behavior identical to the previous uvicorn.run(workers=1).
+    entrypoint: ["sh", "-c", "set -a; . /shared/graph_hashes.env; set +a; exec gunicorn -c gunicorn.conf.py -w 1 -k uvicorn.workers.UvicornWorker main:app -b 0.0.0.0:8000"]
     environment:
       MYSQL_HOST: mariadb
       MYSQL_PORT: "3306"
