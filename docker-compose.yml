@@ -309,6 +309,8 @@ services:
       USERCONFIG_DB: userconfig
       SQLITE_DB_PATH: /xayagame/sv/polygon/storage.sqlite
       ROOT_PATH: /api
+      PERF_BEACON_ALLOWED_ORIGINS: ${PERF_BEACON_ALLOWED_ORIGINS:-http://localhost:3000}
+      PERF_BEACON_RATE: ${PERF_BEACON_RATE:-20000/minute}
       GAME_ID: ${GAME_ID:-sv}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
