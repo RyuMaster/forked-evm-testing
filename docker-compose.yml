@@ -408,7 +408,202 @@ configs:
             path: /var/lib/grafana/dashboards
 
   grafana_api_perf_dashboard:
-    file: ./monitoring/grafana/dashboards/api-perf.json
+    content: |
+      {
+        "annotations": { "list": [] },
+        "editable": true,
+        "fiscalYearStartMonth": 0,
+        "graphTooltip": 0,
+        "id": null,
+        "links": [],
+        "liveNow": false,
+        "panels": [
+          {
+            "type": "row",
+            "title": "Overview (Prometheus)",
+            "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+            "id": 100,
+            "collapsed": false
+          },
+          {
+            "type": "stat",
+            "title": "Calls / minute by target (last 5m)",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "gridPos": { "h": 6, "w": 8, "x": 0, "y": 1 },
+            "id": 1,
+            "targets": [
+              {
+                "expr": "sum by (target) (rate(frontend_api_calls_total[5m])) * 60",
+                "legendFormat": "{{target}}",
+                "refId": "A"
+              }
+            ],
+            "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
+          },
+          {
+            "type": "stat",
+            "title": "Error rate (4xx + 5xx + network) / total",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "gridPos": { "h": 6, "w": 8, "x": 8, "y": 1 },
+            "id": 2,
+            "targets": [
+              {
+                "expr": "sum(rate(frontend_api_calls_total{status_class=~\"4xx|5xx|network_error\"}[5m])) / sum(rate(frontend_api_calls_total[5m]))",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": { "defaults": { "unit": "percentunit", "decimals": 2 } }
+          },
+          {
+            "type": "timeseries",
+            "title": "Duration p95 by target",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 7 },
+            "id": 3,
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, sum by (target, le) (rate(frontend_api_call_duration_seconds_bucket[5m])))",
+                "legendFormat": "p95 {{target}}",
+                "refId": "A"
+              },
+              {
+                "expr": "histogram_quantile(0.50, sum by (target, le) (rate(frontend_api_call_duration_seconds_bucket[5m])))",
+                "legendFormat": "p50 {{target}}",
+                "refId": "B"
+              }
+            ],
+            "fieldConfig": { "defaults": { "unit": "s" } }
+          },
+          {
+            "type": "timeseries",
+            "title": "Network overhead p95 (datacentre-api only)",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 7 },
+            "id": 4,
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, sum by (le) (rate(frontend_api_network_overhead_seconds_bucket{target=\"datacentre-api\"}[5m])))",
+                "legendFormat": "network p95",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": { "defaults": { "unit": "s" } }
+          },
+          {
+            "type": "row",
+            "title": "Per-page drill-down (MariaDB)",
+            "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 },
+            "id": 200,
+            "collapsed": false
+          },
+          {
+            "type": "table",
+            "title": "Slowest pages (last 24h, p95)",
+            "datasource": { "type": "mysql", "uid": "mariadb-datacentre" },
+            "gridPos": { "h": 10, "w": 12, "x": 0, "y": 16 },
+            "id": 5,
+            "targets": [
+              {
+                "rawSql": "SELECT page_route,\n       COUNT(*) AS calls,\n       ROUND(AVG(duration_ms)) AS avg_ms,\n       ROUND(SUBSTRING_INDEX(SUBSTRING_INDEX(\n         GROUP_CONCAT(duration_ms ORDER BY duration_ms),\n         ',', CEIL(0.95 * COUNT(*))), ',', -1)) AS p95_ms\nFROM api_request_log\nWHERE ts >= NOW() - INTERVAL 24 HOUR\nGROUP BY page_route\nORDER BY p95_ms DESC\nLIMIT 20;",
+                "format": "table",
+                "refId": "A"
+              }
+            ]
+          },
+          {
+            "type": "barchart",
+            "title": "Top pages by call volume (last 24h)",
+            "datasource": { "type": "mysql", "uid": "mariadb-datacentre" },
+            "gridPos": { "h": 10, "w": 12, "x": 12, "y": 16 },
+            "id": 6,
+            "targets": [
+              {
+                "rawSql": "SELECT page_route, COUNT(*) AS calls\nFROM api_request_log\nWHERE ts >= NOW() - INTERVAL 24 HOUR\nGROUP BY page_route\nORDER BY calls DESC\nLIMIT 20;",
+                "format": "table",
+                "refId": "A"
+              }
+            ]
+          },
+          {
+            "type": "row",
+            "title": "Per-endpoint drill-down (MariaDB)",
+            "gridPos": { "h": 1, "w": 24, "x": 0, "y": 26 },
+            "id": 300,
+            "collapsed": false
+          },
+          {
+            "type": "table",
+            "title": "Slowest endpoints (target × endpoint, last 24h, p95)",
+            "datasource": { "type": "mysql", "uid": "mariadb-datacentre" },
+            "gridPos": { "h": 12, "w": 24, "x": 0, "y": 27 },
+            "id": 7,
+            "targets": [
+              {
+                "rawSql": "SELECT target, endpoint,\n       COUNT(*) AS calls,\n       ROUND(AVG(duration_ms)) AS avg_ms,\n       ROUND(SUBSTRING_INDEX(SUBSTRING_INDEX(\n         GROUP_CONCAT(duration_ms ORDER BY duration_ms),\n         ',', CEIL(0.95 * COUNT(*))), ',', -1)) AS p95_ms\nFROM api_request_log\nWHERE ts >= NOW() - INTERVAL 24 HOUR\nGROUP BY target, endpoint\nORDER BY p95_ms DESC\nLIMIT 30;",
+                "format": "table",
+                "refId": "A"
+              }
+            ]
+          },
+          {
+            "type": "table",
+            "title": "Endpoints called per page (last 24h, p95)",
+            "datasource": { "type": "mysql", "uid": "mariadb-datacentre" },
+            "gridPos": { "h": 14, "w": 24, "x": 0, "y": 39 },
+            "id": 9,
+            "targets": [
+              {
+                "rawSql": "SELECT page_route, target, endpoint,\n       COUNT(*) AS calls,\n       ROUND(AVG(duration_ms)) AS avg_ms,\n       ROUND(SUBSTRING_INDEX(SUBSTRING_INDEX(\n         GROUP_CONCAT(duration_ms ORDER BY duration_ms),\n         ',', CEIL(0.95 * COUNT(*))), ',', -1)) AS p95_ms\nFROM api_request_log\nWHERE ts >= NOW() - INTERVAL 24 HOUR\nGROUP BY page_route, target, endpoint\nORDER BY page_route, p95_ms DESC;",
+                "format": "table",
+                "refId": "A"
+              }
+            ]
+          },
+          {
+            "type": "row",
+            "title": "Single session view",
+            "gridPos": { "h": 1, "w": 24, "x": 0, "y": 53 },
+            "id": 400,
+            "collapsed": false
+          },
+          {
+            "type": "table",
+            "title": "Session timeline (filter via $session_id)",
+            "datasource": { "type": "mysql", "uid": "mariadb-datacentre" },
+            "gridPos": { "h": 14, "w": 24, "x": 0, "y": 54 },
+            "id": 8,
+            "targets": [
+              {
+                "rawSql": "SELECT ts, page_route, target, endpoint, method, status, duration_ms, server_ms\nFROM api_request_log\nWHERE session_id = '$session_id'\n  AND ts >= NOW() - INTERVAL 7 DAY\nORDER BY ts;",
+                "format": "table",
+                "refId": "A"
+              }
+            ]
+          }
+        ],
+        "refresh": "30s",
+        "schemaVersion": 39,
+        "tags": ["api", "perf"],
+        "templating": {
+          "list": [
+            {
+              "name": "session_id",
+              "type": "query",
+              "datasource": { "type": "mysql", "uid": "mariadb-datacentre" },
+              "query": "SELECT DISTINCT session_id FROM api_request_log WHERE ts >= NOW() - INTERVAL 24 HOUR ORDER BY ts DESC LIMIT 100;",
+              "refresh": 2,
+              "label": "Session"
+            }
+          ]
+        },
+        "time": { "from": "now-24h", "to": "now" },
+        "timepicker": {},
+        "timezone": "",
+        "title": "API Performance",
+        "uid": "api-perf",
+        "version": 1,
+        "weekStart": ""
+      }
 
 volumes:
   gspdata:
