@@ -135,9 +135,23 @@
       ]
     },
     {
+      "type": "table",
+      "title": "Endpoints called per page (last 24h, p95)",
+      "datasource": { "type": "mysql", "uid": "mariadb-datacentre" },
+      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 39 },
+      "id": 9,
+      "targets": [
+        {
+          "rawSql": "SELECT page_route, target, endpoint,\n       COUNT(*) AS calls,\n       ROUND(AVG(duration_ms)) AS avg_ms,\n       ROUND(SUBSTRING_INDEX(SUBSTRING_INDEX(\n         GROUP_CONCAT(duration_ms ORDER BY duration_ms),\n         ',', CEIL(0.95 * COUNT(*))), ',', -1)) AS p95_ms\nFROM api_request_log\nWHERE ts >= NOW() - INTERVAL 24 HOUR\nGROUP BY page_route, target, endpoint\nORDER BY page_route, p95_ms DESC;",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
       "type": "row",
       "title": "Single session view",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 39 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 53 },
       "id": 400,
       "collapsed": false
     },
@@ -145,7 +159,7 @@
       "type": "table",
       "title": "Session timeline (filter via $session_id)",
       "datasource": { "type": "mysql", "uid": "mariadb-datacentre" },
-      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 40 },
+      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 54 },
       "id": 8,
       "targets": [
         {
