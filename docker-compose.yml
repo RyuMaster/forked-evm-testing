@@ -61,6 +61,7 @@ services:
     volumes:
       - ${ARCHIVAL_SQL_PATH:-./archival.sql}:/docker-entrypoint-initdb.d/archival.sql:ro
       - ${USERCONFIG_SQL_PATH:-./userconfig.sql}:/seed/userconfig.sql:ro
+      - ./db-init/datacentre-overrides.cnf:/etc/mysql/conf.d/zz-extras.cnf:ro
       - mariadb_data:/var/lib/mysql
     ports:
       - "${MARIADB_PORT:-3307}:3306"

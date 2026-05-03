@@ -93,7 +93,7 @@
       "id": 5,
       "targets": [
         {
-          "rawSql": "SET SESSION group_concat_max_len = 4194304;\nSELECT page_route,\n       COUNT(*) AS calls,\n       ROUND(AVG(duration_ms)) AS avg_ms,\n       ROUND(SUBSTRING_INDEX(SUBSTRING_INDEX(\n         GROUP_CONCAT(duration_ms ORDER BY duration_ms),\n         ',', CEIL(0.95 * COUNT(*))), ',', -1)) AS p95_ms\nFROM api_request_log\nWHERE ts >= NOW() - INTERVAL 24 HOUR\nGROUP BY page_route\nORDER BY p95_ms DESC\nLIMIT 20;",
+          "rawSql": "SELECT page_route,\n       COUNT(*) AS calls,\n       ROUND(AVG(duration_ms)) AS avg_ms,\n       ROUND(SUBSTRING_INDEX(SUBSTRING_INDEX(\n         GROUP_CONCAT(duration_ms ORDER BY duration_ms),\n         ',', CEIL(0.95 * COUNT(*))), ',', -1)) AS p95_ms\nFROM api_request_log\nWHERE ts >= NOW() - INTERVAL 24 HOUR\nGROUP BY page_route\nORDER BY p95_ms DESC\nLIMIT 20;",
           "format": "table",
           "refId": "A"
         }
@@ -128,7 +128,7 @@
       "id": 7,
       "targets": [
         {
-          "rawSql": "SET SESSION group_concat_max_len = 4194304;\nSELECT target, endpoint,\n       COUNT(*) AS calls,\n       ROUND(AVG(duration_ms)) AS avg_ms,\n       ROUND(SUBSTRING_INDEX(SUBSTRING_INDEX(\n         GROUP_CONCAT(duration_ms ORDER BY duration_ms),\n         ',', CEIL(0.95 * COUNT(*))), ',', -1)) AS p95_ms\nFROM api_request_log\nWHERE ts >= NOW() - INTERVAL 24 HOUR\nGROUP BY target, endpoint\nORDER BY p95_ms DESC\nLIMIT 30;",
+          "rawSql": "SELECT target, endpoint,\n       COUNT(*) AS calls,\n       ROUND(AVG(duration_ms)) AS avg_ms,\n       ROUND(SUBSTRING_INDEX(SUBSTRING_INDEX(\n         GROUP_CONCAT(duration_ms ORDER BY duration_ms),\n         ',', CEIL(0.95 * COUNT(*))), ',', -1)) AS p95_ms\nFROM api_request_log\nWHERE ts >= NOW() - INTERVAL 24 HOUR\nGROUP BY target, endpoint\nORDER BY p95_ms DESC\nLIMIT 30;",
           "format": "table",
           "refId": "A"
         }

@@ -1,0 +1,5 @@
+[mysqld]
+# Bumped from MariaDB default (1024) so Grafana's percentile queries
+# (modules api-perf dashboard panels 5 + 7) can use GROUP_CONCAT(duration_ms)
+# without silent truncation. 4 MiB fits ~700k 5-byte values per group.
+group_concat_max_len = 4194304
