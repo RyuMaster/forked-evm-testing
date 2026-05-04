@@ -28,14 +28,24 @@ MARIADB_PASS="${MARIADB_PASS:-gsparchival}"
 GSP="${STACK}-gsp-1"
 MARIA="${STACK}-mariadb-1"
 
-if ! docker inspect "$GSP" >/dev/null 2>&1; then
-  echo "ERROR: container $GSP not found (set STACK=<prefix>)" >&2
+check_container() {
+  local name="$1"
+  local err
+  if err=$(docker inspect "$name" 2>&1 >/dev/null); then
+    return 0
+  fi
+  if echo "$err" | grep -qi 'permission denied'; then
+    echo "ERROR: docker daemon access denied — try 'sudo $0' or add" >&2
+    echo "       your user to the docker group: sudo usermod -aG docker \$USER" >&2
+  elif echo "$err" | grep -qi 'No such object\|no such container'; then
+    echo "ERROR: container '$name' not found (set STACK=<prefix>)" >&2
+  else
+    echo "ERROR: docker inspect $name: $err" >&2
+  fi
   exit 1
-fi
-if ! docker inspect "$MARIA" >/dev/null 2>&1; then
-  echo "ERROR: container $MARIA not found" >&2
-  exit 1
-fi
+}
+check_container "$GSP"
+check_container "$MARIA"
 if [ ! -f docker-compose.yml ]; then
   echo "ERROR: run this from the repo root (docker-compose.yml not found)" >&2
   exit 1
