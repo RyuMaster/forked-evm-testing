@@ -2,9 +2,14 @@
 # Snapshot the three first-boot seed files before tearing the stack down,
 # so the next fresh deploy can resume from this state.
 #
-# Stops every stack service except MariaDB to quiesce all writers
-# (gsp, xayax, datacentre-updater, datacentre-api, etc.), then copies
-# storage.sqlite and dumps the two MariaDB schemas.
+# Operates on running containers by name (matching ${STACK}-* prefix), so
+# it works equally well with `docker compose`, Portainer-managed stacks,
+# or any other deployment tool — it does NOT require a populated local
+# .env or even the compose file at all.
+#
+# Stops every container in the stack except MariaDB to quiesce all
+# writers (gsp, xayax, datacentre-updater, datacentre-api, etc.), copies
+# storage.sqlite, and dumps the two MariaDB schemas.
 #
 # Outputs (in $OUT_DIR):
 #   storage.sqlite    — raw SQLite for STORAGE_SQLITE_PATH
@@ -14,10 +19,13 @@
 # Usage:
 #   scripts/snapshot-stack.sh [output-dir]
 #
-# Run from the repo root (compose stop needs the compose file).
+# Env knobs:
+#   STACK         Compose project / stack prefix (default: svstackll)
+#   MARIADB_PASS  Root password (default: gsparchival)
 #
-# After this completes: `docker compose down -v` to wipe volumes,
-# then redeploy fresh with the .env paths printed at the end.
+# After this completes: tear the stack down (docker compose down -v, or
+# in Portainer remove the stack), then redeploy fresh with the .env
+# paths printed at the end.
 
 set -euo pipefail
 
@@ -46,19 +54,26 @@ check_container() {
 }
 check_container "$GSP"
 check_container "$MARIA"
-if [ ! -f docker-compose.yml ]; then
-  echo "ERROR: run this from the repo root (docker-compose.yml not found)" >&2
-  exit 1
-fi
 
 mkdir -p "$OUT_DIR"
 OUT_ABS=$(cd "$OUT_DIR" && pwd)
 echo "→ snapshot dir: $OUT_ABS"
 
-# --- stop every service except MariaDB ---
-mapfile -t SERVICES < <(docker compose config --services | grep -v '^mariadb$')
-echo "→ stopping ${#SERVICES[@]} services (keeping MariaDB up for the dump)..."
-docker compose stop "${SERVICES[@]}"
+# --- stop every running stack container except MariaDB ---
+# We match by container name prefix, not via `docker compose`, because
+# the local repo's .env may be empty (Portainer-managed stacks etc.)
+# and `docker compose config` would refuse to validate.
+mapfile -t TO_STOP < <(
+  docker ps --filter "name=^${STACK}-" --format '{{.Names}}' \
+    | grep -v "^${MARIA}\$" || true
+)
+if [ "${#TO_STOP[@]}" -eq 0 ]; then
+  echo "→ no other ${STACK}-* containers running; only $MARIA active"
+else
+  echo "→ stopping ${#TO_STOP[@]} container(s), keeping $MARIA up:"
+  printf '   %s\n' "${TO_STOP[@]}"
+  docker stop "${TO_STOP[@]}" >/dev/null
+fi
 
 # --- 1. SQLite (gsp is now stopped, file is at rest) ---
 echo "→ copying storage.sqlite..."
@@ -87,12 +102,11 @@ Snapshot complete. The stack is halted (MariaDB still running).
 Next steps when you're ready to wipe and redeploy:
 
   docker compose down -v          # destructive — wipes all volumes
+                                  # (or remove the stack from Portainer)
 
-Then set in .env before bringing the new stack up:
+Then set in the new .env before bringing the new stack up:
 
   STORAGE_SQLITE_PATH=$OUT_ABS/storage.sqlite
   ARCHIVAL_SQL_PATH=$OUT_ABS/archival.sql
   USERCONFIG_SQL_PATH=$OUT_ABS/userconfig.sql
-
-  docker compose up -d
 EOF
