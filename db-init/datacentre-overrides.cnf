@@ -3,3 +3,10 @@
 # (modules api-perf dashboard panels 5 + 7) can use GROUP_CONCAT(duration_ms)
 # without silent truncation. 4 MiB fits ~700k 5-byte values per group.
 group_concat_max_len = 4194304
+
+# Bumped from MariaDB default (151). datacentre-api runs 4 gunicorn
+# workers, each holding 4 SQLAlchemy pools (pool_size+max_overflow up to
+# 35/35/25/25 = 120 connections per worker → 480 worst-case). Plus GSP +
+# datacentre-updater. 600 leaves headroom for healthchecks. ~600 MB RAM
+# worst case (each connection ~1 MB).
+max_connections = 600
