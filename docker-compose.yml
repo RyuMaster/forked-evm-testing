@@ -61,8 +61,17 @@ services:
     volumes:
       - ${ARCHIVAL_SQL_PATH:-./archival.sql}:/docker-entrypoint-initdb.d/archival.sql:ro
       - ${USERCONFIG_SQL_PATH:-./userconfig.sql}:/seed/userconfig.sql:ro
-      - ./db-init/datacentre-overrides.cnf:/etc/mysql/conf.d/zz-extras.cnf:ro
       - mariadb_data:/var/lib/mysql
+    # Server tuning is delivered as a Docker config (inlined below) instead
+    # of a bind mount, because Portainer's "Repository" deploy mode doesn't
+    # ship repo subdirectories to the agent — bind mounts at ./db-init/...
+    # silently resolve to empty auto-created dirs, and MariaDB's
+    # !includedir skips them. The standalone db-init/datacentre-overrides.cnf
+    # remains as a human-readable reference; edit BOTH places when changing.
+    configs:
+      - source: mariadb_overrides
+        target: /etc/mysql/conf.d/zz-extras.cnf
+        mode: 0444
     ports:
       - "${MARIADB_PORT:-3307}:3306"
     stop_grace_period: 5s
@@ -356,6 +365,21 @@ services:
 # human-readable references; edit BOTH places when changing them, or delete
 # the standalone files if you prefer a single source of truth.
 configs:
+  mariadb_overrides:
+    content: |
+      [mysqld]
+      # Bumped from MariaDB default (1024) so Grafana's percentile queries
+      # (modules api-perf dashboard panels 5 + 7) can use GROUP_CONCAT
+      # without silent truncation. 4 MiB fits ~700k 5-byte values per group.
+      group_concat_max_len = 4194304
+
+      # Bumped from MariaDB default (151). datacentre-api runs 4 gunicorn
+      # workers, each holding 4 SQLAlchemy pools (pool_size+max_overflow up
+      # to 35/35/25/25 = 120 conns per worker → 480 worst-case). Plus GSP +
+      # datacentre-updater. 600 leaves headroom for healthchecks. ~600 MB
+      # RAM worst case (each connection ~1 MB).
+      max_connections = 600
+
   prometheus_yml:
     content: |
       global:
