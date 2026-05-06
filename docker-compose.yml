@@ -572,13 +572,13 @@ configs:
           },
           {
             "type": "table",
-            "title": "Endpoints called per page (last 24h, max per visit)",
+            "title": "Endpoints called per page (last 24h, max per visit, 30s gap)",
             "datasource": { "type": "mysql", "uid": "mariadb-datacentre" },
             "gridPos": { "h": 14, "w": 24, "x": 0, "y": 39 },
             "id": 9,
             "targets": [
               {
-                "rawSql": "WITH per_session AS (\n  SELECT session_id, page_route, target, endpoint,\n         COUNT(*) AS session_calls,\n         SUM(duration_ms) AS dur_sum,\n         COUNT(*) AS dur_n\n  FROM api_request_log\n  WHERE ts >= NOW() - INTERVAL 24 HOUR\n  GROUP BY session_id, page_route, target, endpoint\n)\nSELECT page_route, target, endpoint,\n       MAX(session_calls) AS max_calls,\n       ROUND(SUM(dur_sum)/SUM(dur_n)) AS avg_ms\nFROM per_session\nGROUP BY page_route, target, endpoint\nORDER BY page_route, max_calls DESC;",
+                "rawSql": "WITH flagged AS (\n  SELECT\n    session_id, page_route, target, endpoint, duration_ms, ts,\n    CASE\n      WHEN LAG(ts) OVER (PARTITION BY session_id, page_route ORDER BY ts) IS NULL THEN 1\n      WHEN TIMESTAMPDIFF(SECOND,\n             LAG(ts) OVER (PARTITION BY session_id, page_route ORDER BY ts),\n             ts) > 30 THEN 1\n      ELSE 0\n    END AS new_visit\n  FROM api_request_log\n  WHERE ts >= NOW() - INTERVAL 24 HOUR\n),\nvisits AS (\n  SELECT\n    session_id, page_route, target, endpoint, duration_ms,\n    SUM(new_visit) OVER (PARTITION BY session_id, page_route\n                         ORDER BY ts ROWS UNBOUNDED PRECEDING) AS visit_id\n  FROM flagged\n),\nper_visit AS (\n  SELECT session_id, page_route, target, endpoint, visit_id,\n         COUNT(*) AS calls,\n         SUM(duration_ms) AS dur_sum,\n         COUNT(*) AS dur_n\n  FROM visits\n  GROUP BY session_id, page_route, target, endpoint, visit_id\n)\nSELECT page_route, target, endpoint,\n       MAX(calls) AS max_calls,\n       ROUND(SUM(dur_sum)/SUM(dur_n)) AS avg_ms,\n       COUNT(*) AS visits_seen\nFROM per_visit\nGROUP BY page_route, target, endpoint\nORDER BY page_route, max_calls DESC;",
                 "format": "table",
                 "refId": "A"
               }
