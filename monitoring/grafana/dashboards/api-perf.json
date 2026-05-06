@@ -136,13 +136,13 @@
     },
     {
       "type": "table",
-      "title": "Endpoints called per page (last 24h, p95)",
+      "title": "Endpoints called per page (last 24h, max per visit + p95)",
       "datasource": { "type": "mysql", "uid": "mariadb-datacentre" },
       "gridPos": { "h": 14, "w": 24, "x": 0, "y": 39 },
       "id": 9,
       "targets": [
         {
-          "rawSql": "SELECT page_route, target, endpoint,\n       COUNT(*) AS calls,\n       ROUND(AVG(duration_ms)) AS avg_ms,\n       ROUND(SUBSTRING_INDEX(SUBSTRING_INDEX(\n         GROUP_CONCAT(duration_ms ORDER BY duration_ms),\n         ',', CEIL(0.95 * COUNT(*))), ',', -1)) AS p95_ms\nFROM api_request_log\nWHERE ts >= NOW() - INTERVAL 24 HOUR\nGROUP BY page_route, target, endpoint\nORDER BY page_route, p95_ms DESC;",
+          "rawSql": "WITH per_session AS (\n  SELECT session_id, page_route, target, endpoint,\n         COUNT(*) AS session_calls\n  FROM api_request_log\n  WHERE ts >= NOW() - INTERVAL 24 HOUR\n  GROUP BY session_id, page_route, target, endpoint\n),\nper_endpoint_visit AS (\n  SELECT page_route, target, endpoint,\n         MAX(session_calls) AS max_calls\n  FROM per_session\n  GROUP BY page_route, target, endpoint\n),\nper_endpoint_dur AS (\n  SELECT page_route, target, endpoint,\n         ROUND(AVG(duration_ms)) AS avg_ms,\n         ROUND(SUBSTRING_INDEX(SUBSTRING_INDEX(\n           GROUP_CONCAT(duration_ms ORDER BY duration_ms),\n           ',', CEIL(0.95 * COUNT(*))), ',', -1)) AS p95_ms\n  FROM api_request_log\n  WHERE ts >= NOW() - INTERVAL 24 HOUR\n  GROUP BY page_route, target, endpoint\n)\nSELECT v.page_route, v.target, v.endpoint,\n       v.max_calls,\n       d.avg_ms,\n       d.p95_ms\nFROM per_endpoint_visit v\nJOIN per_endpoint_dur d\n  ON d.page_route = v.page_route\n AND d.target = v.target\n AND d.endpoint = v.endpoint\nORDER BY v.page_route, d.p95_ms DESC;",
           "format": "table",
           "refId": "A"
         }
