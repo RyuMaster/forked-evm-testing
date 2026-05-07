@@ -20,9 +20,8 @@ server {
     rewrite ^/chain/?(.*)$ /$1 break;
     proxy_pass $chain_upstream;
     proxy_http_version 1.1;
-    proxy_set_header Host polygon-node.xaya.io;
+    proxy_set_header Host polygon.drpc.org;
     proxy_set_header Content-Type application/json;
-    proxy_set_header Authorization ${BLOCKCHAIN_AUTH_HEADER};
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "upgrade";
     proxy_ssl_server_name on;
