@@ -89,7 +89,7 @@ services:
       "--xaya_rpc_protocol=2",
       "--nogame_rpc_listen_locally",
       "--xaya_connection_check_ms=10000",
-      "--xaya_zmq_staleness_ms=10000",
+      "--xaya_zmq_staleness_ms=30000",
       "--extfile_endpoint=http://soccerverse-download-site.s3-website.eu-west-2.amazonaws.com",
       "--archival_db=mysql://root:gsparchival@mariadb:3306/archival",
       "--alsologtostderr",
