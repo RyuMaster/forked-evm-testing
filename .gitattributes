@@ -1,0 +1,12 @@
+# Files that are executed or processed on the Linux deploy host MUST use LF
+# line endings regardless of the committer's OS. A CRLF in a shebang line
+# (e.g. "#!/bin/sh\r") makes the kernel look for the interpreter "/bin/sh\r"
+# and fail with "exec: no such file or directory". Keeping these LF also
+# means a tar/scp copy from a Windows working tree stays runnable on Linux.
+*.sh        text eol=lf
+*.template  text eol=lf
+*.cnf       text eol=lf
+*.py        text eol=lf
+Dockerfile  text eol=lf
+deploy.sh   text eol=lf
+entrypoint.sh text eol=lf
