@@ -20,7 +20,12 @@ server {
     rewrite ^/chain/?(.*)$ /$1 break;
     proxy_pass $chain_upstream;
     proxy_http_version 1.1;
-    proxy_set_header Host polygon.drpc.org;
+    # Send the Host header that matches the configured upstream rather than a
+    # hardcoded one, so BLOCKCHAIN_RPC_URL can point at any provider (dRPC,
+    # polygon-node.xaya.io, etc.) without the upstream rejecting/misrouting on
+    # a stale Host. $proxy_host is derived from $chain_upstream above; SNI is
+    # handled by proxy_ssl_server_name below.
+    proxy_set_header Host $proxy_host;
     proxy_set_header Content-Type application/json;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "upgrade";
