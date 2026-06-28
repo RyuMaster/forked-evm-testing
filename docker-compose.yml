@@ -36,16 +36,21 @@ services:
 
   gsp:
     image: ${GSP_IMAGE}
+    # tn-base:latest is a locally-loaded image (not in a registry); never try to pull it.
+    pull_policy: never
     command: [
-      "smcd",
+      "tauriond",
       "--xaya_rpc_url=http://xayax:8000",
       "--xaya_rpc_protocol=2",
       "--game_rpc_port=8600",
       "--nogame_rpc_listen_locally",
+      "--datadir=/xayagame",
       "--xaya_connection_check_ms=10000",
       "--xaya_zmq_staleness_ms=10000",
       "--alsologtostderr",
     ]
+    volumes:
+      - gspdata:/xayagame
     stop_grace_period: 1s
     depends_on:
       healthcheck_xayax:
@@ -65,7 +70,9 @@ services:
     build:
       context: ./nginx
     ports:
-      - "8100:80"
+      # Host port is configurable so this stack can run alongside the Soccerverse
+      # stack (which already publishes 8100). Defaults to 8101.
+      - "${TAURION_NGINX_PORT:-8101}:80"
     stop_grace_period: 1s
 
   healthcheck_chain:
@@ -87,3 +94,7 @@ services:
       interval: 1s
       timeout: 5s
       retries: 10
+
+volumes:
+  # Persists the Taurion GSP (tauriond) SQLite state across restarts/redeploys.
+  gspdata:
