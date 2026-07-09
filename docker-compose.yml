@@ -10,7 +10,20 @@ services:
     environment:
       ENDPOINT:  ${BLOCKCHAIN_ENDPOINT}
       FORK_BLOCK_NUMBER: ${FORK_BLOCK_NUMBER}
-    stop_grace_period: 1s
+    volumes:
+      # Persists the forked chain across restarts so a crash/redeploy resumes
+      # the SAME blocks instead of re-forking fresh. Re-forking rewinds every
+      # locally-mined block to new hashes, which xayax+GSP (synced past the fork
+      # point) see as a reorg-beyond-pruning-depth and abort on. See
+      # basechain/entrypoint.sh for the full rationale.
+      - basechain_state:/state
+    # Auto-recover from an upstream-RPC panic/OOM instead of staying dead for
+    # hours. Safe now that state is persisted: the restarted node reloads the
+    # same chain rather than diverging from xayax/GSP.
+    restart: unless-stopped
+    # Give anvil time to flush a final state snapshot on graceful stop/redeploy
+    # (the periodic --state-interval flush already covers hard crashes).
+    stop_grace_period: 30s
 
   xayax:
     image: xaya/xayax
@@ -98,3 +111,7 @@ services:
 volumes:
   # Persists the Taurion GSP (tauriond) SQLite state across restarts/redeploys.
   gspdata:
+  # Anvil's forked-chain state snapshot. Survives `docker compose down` and
+  # redeploys; wipe it (`docker volume rm <stack>_basechain_state`) to start
+  # from a clean fork or after changing FORK_BLOCK_NUMBER.
+  basechain_state:

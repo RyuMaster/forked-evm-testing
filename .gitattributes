@@ -1,0 +1,8 @@
+# Container entrypoints and shell scripts MUST stay LF regardless of the host
+# git config. A CRLF shebang (`#!/bin/sh\r`) breaks execution inside the Linux
+# containers ("no such file or directory"), which would be an intermittent,
+# host-dependent failure. Pin the line endings so a Windows checkout can never
+# corrupt the built image.
+*.sh    text eol=lf
+Dockerfile text eol=lf
+*.py    text eol=lf
