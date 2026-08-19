@@ -69,6 +69,35 @@ services:
       healthcheck_xayax:
         condition: service_healthy
 
+  # One-shot step that pulls the accounts / policy / WCHI / name-receiver state
+  # into anvil's forked-state cache before anything asks for it in anger.
+  #
+  # A fresh stack has an empty cache, and the upstream RPC pool answers a
+  # sizeable fraction of COLD account fetches with a JSON-RPC error rather than
+  # an empty account -- which anvil, correctly, treats as an authoritative
+  # answer rather than something to retry. The first thing to touch such an
+  # address is then what fails, and that used to be a player pressing "Create".
+  # See helper/warmup.py for the measurements and for why raising anvil's
+  # --retries is not the fix.
+  #
+  # Shares the helper image because it needs exactly what the helper needs (web3
+  # plus the contract ABIs). Read-only, so re-running it is always safe:
+  #   docker compose run --rm warmup
+  warmup:
+    build:
+      context: ./helper
+    entrypoint: ["python3", "/usr/local/bin/warmup.py"]
+    environment:
+      ACCOUNTS_CONTRACT: ${ACCOUNTS_CONTRACT}
+      WARMUP_BUDGET_SECONDS: ${WARMUP_BUDGET_SECONDS:-180}
+      WARMUP_EXTRA_ADDRESSES: ${WARMUP_EXTRA_ADDRESSES:-0x1234567890123456789012345678901234567890}
+    # A step, not a service: it must run once to completion, never be restarted.
+    restart: "no"
+    stop_grace_period: 1s
+    depends_on:
+      healthcheck_chain:
+        condition: service_healthy
+
   helper:
     build:
       context: ./helper
@@ -76,8 +105,14 @@ services:
       ACCOUNTS_CONTRACT: ${ACCOUNTS_CONTRACT}
     stop_grace_period: 1s
     depends_on:
-      healthcheck_chain:
-        condition: service_healthy
+      # Deliberately the warm-up rather than healthcheck_chain. That healthcheck
+      # only proves anvil answers eth_chainId, which it does from memory as soon
+      # as it binds -- before the fork can serve state. This server resolves
+      # wchiToken() at import time and has died in exactly that gap. Waiting for
+      # the warm-up to COMPLETE closes the window, and warms the registration
+      # path on the way through.
+      warmup:
+        condition: service_completed_successfully
 
   nginx:
     build:

@@ -22,6 +22,9 @@ COPY --from=npm \
   .
 
 WORKDIR /usr/local/bin
-COPY rpcserver.py .
+# warmup.py is not this image's entrypoint. The compose stack runs it as a
+# separate one-shot `warmup` service off the same image (it needs exactly what
+# the helper needs: web3 plus the ABIs above) and makes the helper wait for it.
+COPY rpcserver.py warmup.py .
 
 ENTRYPOINT ["/usr/local/bin/rpcserver.py"]
