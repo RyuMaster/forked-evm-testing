@@ -37,6 +37,12 @@ stack -- it had simply never fetched that account before.
 So the retrying belongs HERE, at boot, where it is correct, unattended, and
 where a failure is a log line instead of a player-visible error.
 
+A SECOND cause reaches the same place from the other direction: for the first
+seconds of its life the fork cannot EXECUTE at all, whatever it has cached.
+See NOT_READY_MARKERS and step 2 of main() -- the first version of this script
+probed readiness with something cheaper than an eth_call and so ran, and gave
+up, inside the very window it was written to wait out.
+
 THIS SCRIPT IS READ-ONLY.  eth_getBalance / eth_getCode / eth_call only.  It
 never sends a transaction, never mines a block and never impersonates an
 account, so it cannot change chain state no matter how often it runs.
@@ -82,6 +88,36 @@ COLD_FETCH_MARKERS = (
   "historical state",
 )
 
+# The fork not being ready to EXECUTE yet -- a different thing from not being
+# able to FETCH, and the reason this file needed a second pass.
+#
+# anvil answers eth_chainId and eth_blockNumber from memory the moment it binds
+# its port.  An eth_call needs more: the block environment anvil builds from the
+# forked block header, including the EIP-4844 blob-gas fields.  Until that is
+# populated every call fails with
+#
+#     -32602  Excess blob gas not set.
+#
+# which is JSON-RPC's code for "invalid params" and reads like a malformed
+# request.  It is really "not yet".  Measured on 2026-08-20: the warm-up asked
+# 1.8s after anvil started, took that answer as authoritative, abandoned all
+# three of its eth_call targets in 1.6s of a 180s budget, and exited 0; the
+# helper then started 0.2s later, hit the same error resolving wchiToken() at
+# import, and -- having no restart policy at the time -- stayed dead.  The same
+# call against the same container minutes later executed normally.
+#
+# Retrying it is therefore correct AND bounded: either the fork finishes coming
+# up well inside the budget, or the stack has a real problem that a fast failure
+# would not have fixed either.
+NOT_READY_MARKERS = (
+  "excess blob gas",
+)
+
+# What withRetry will spend the budget on.  Everything outside it means the EVM
+# actually ran (or the request was malformed), and if it ran then the state it
+# needed was fetched -- which is all this script is trying to achieve.
+RETRYABLE_MARKERS = COLD_FETCH_MARKERS + NOT_READY_MARKERS
+
 
 def log (msg):
   print ("warm-up: %s" % msg, flush=True)
@@ -93,18 +129,24 @@ def loadAbi (nm):
   return data["abi"]
 
 
-def isColdFetchFailure (exc):
-  """Whether exc is the upstream refusing a cold state fetch (i.e. retryable)."""
+def isRetryable (exc):
+  """
+  Whether exc is worth another attempt.
+
+  Two distinct causes, deliberately handled together because the response is
+  the same: the upstream refusing a cold state fetch (COLD_FETCH_MARKERS), and
+  the fork not being ready to execute yet (NOT_READY_MARKERS).
+  """
 
   msg = str (exc).lower ()
-  return any (m in msg for m in COLD_FETCH_MARKERS)
+  return any (m in msg for m in RETRYABLE_MARKERS)
 
 
 def retryAlways (exc):
   return True
 
 
-def withRetry (what, fn, deadline, shouldRetry=isColdFetchFailure):
+def withRetry (what, fn, deadline, shouldRetry=isRetryable):
   """
   Calls fn until it succeeds or the deadline passes.  Returns (ok, value).
 
@@ -123,7 +165,7 @@ def withRetry (what, fn, deadline, shouldRetry=isColdFetchFailure):
       return True, value
     except Exception as exc:
       if not shouldRetry (exc):
-        log ("  %s: giving up, not a cold-fetch failure: %s" % (what, exc))
+        log ("  %s: giving up, not a retryable failure: %s" % (what, exc))
         return False, None
       if time.time () >= deadline:
         log ("  %s: STILL COLD after %d attempts: %s" % (what, attempt, exc))
@@ -155,23 +197,52 @@ def main ():
 
   # 1. The chain has to answer at all.
   #
-  # healthcheck_chain only proves that nginx can reach anvil's eth_chainId, and
-  # anvil serves that from memory the moment it binds its port -- before the
-  # fork can serve any state.  That gap is a real one: on 2026-08-19 the helper
-  # started inside it and died at import on "Excess blob gas not set", then came
-  # back clean 30s later.  Asking for a block number here closes it, because
-  # this service completing is what the helper now waits for.
+  # healthcheck_chain only proves that nginx can reach anvil's eth_chainId,
+  # which anvil serves from memory the moment it binds its port.  So does the
+  # block number asked for here.  Both are necessary and NEITHER is sufficient
+  # -- see step 2.
   ok, _ = withRetry ("chain reachable", lambda: w3.eth.block_number, deadline,
                      shouldRetry=retryAlways)
   if not ok:
     log ("chain never became reachable; leaving the cache cold")
     return
 
-  # 2. Resolve the contracts rather than hard-coding them, so this keeps warming
-  #    the right addresses if the deployment's accounts contract ever changes.
   accountsAddr = Web3.to_checksum_address (os.getenv ("ACCOUNTS_CONTRACT"))
   accounts = w3.eth.contract (address=accountsAddr, abi=loadAbi ("IXayaAccounts"))
 
+  # 2. ...and the fork has to be able to EXECUTE, which happens strictly later.
+  #
+  # This is the gate the helper is really waiting for.  It imports by resolving
+  # wchiToken() -- an eth_call -- so the moment that matters is not when anvil
+  # binds but when it can build a block environment from the forked header.
+  # Probing with the operation that fails is the whole point: a readiness check
+  # cheaper than the thing it certifies certifies nothing.  On 2026-08-20 this
+  # was a ~30s window and both this script and the helper started inside it.
+  #
+  # An empty-calldata call to the accounts contract is the smallest probe that
+  # needs a block environment.  A REVERT IS SUCCESS -- it means the EVM ran,
+  # which is the only question being asked; the contract has no fallback, so
+  # reverting is in fact the expected answer.
+  #
+  # retryAlways, because in this window every failure mode is indistinguishable
+  # from "not yet" and the budget bounds the wait.  A genuine misconfiguration
+  # costs one slow boot, against a helper that dies on arrival.
+  def forkCanExecute ():
+    try:
+      w3.eth.call ({"to": accountsAddr, "data": "0x"})
+      return "executed"
+    except ContractLogicError:
+      return "reverted, which still means the EVM ran"
+
+  ok, outcome = withRetry ("fork can execute", forkCanExecute, deadline,
+                           shouldRetry=retryAlways)
+  if not ok:
+    log ("the fork never became able to execute; leaving the cache cold")
+    return
+  log ("fork can execute: %s" % outcome)
+
+  # 3. Resolve the contracts rather than hard-coding them, so this keeps warming
+  #    the right addresses if the deployment's accounts contract ever changes.
   targets = [("accounts", accountsAddr)]
 
   ok, policyAddr = withRetry ("resolve policy",
@@ -196,7 +267,7 @@ def main ():
     if not warmAddress (label, addr, deadline):
       cold.append ("%s (%s)" % (label, addr))
 
-  # 3. The strongest warm-up available: dry-run the real registration.
+  # 4. The strongest warm-up available: dry-run the real registration.
   #
   # Warming an account caches the ACCOUNT; it does not cache that account's
   # individual storage slots, which anvil also fetches lazily and one at a time.
@@ -222,7 +293,7 @@ def main ():
     else:
       cold.append ("register path storage")
 
-  # 4. Report.
+  # 5. Report.
   if cold:
     log ("WARNING -- %d target(s) still cold: %s" % (len (cold), "; ".join (cold)))
     log ("the stack will still start, but the first action touching one of "

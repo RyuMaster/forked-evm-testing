@@ -104,6 +104,15 @@ services:
     environment:
       ACCOUNTS_CONTRACT: ${ACCOUNTS_CONTRACT}
     stop_grace_period: 1s
+    # This was the only long-running service in the stack without one, and the
+    # omission is what turned a transient boot race into an outage: the server
+    # resolves wchiToken() at import, so anything that upsets that one call
+    # kills the process, and compose's default `no` then left the entire write
+    # path -- registration, moves, admin -- dead until a human noticed and ran
+    # `docker start`.  The warm-up below is what PREVENTS the race; this is the
+    # net under it, because a restart re-runs exactly the resolution that
+    # failed and the next attempt is seconds later.
+    restart: unless-stopped
     depends_on:
       # Deliberately the warm-up rather than healthcheck_chain. That healthcheck
       # only proves anvil answers eth_chainId, which it does from memory as soon

@@ -65,23 +65,37 @@ PRUNED_STATE = ("historical state at block 6b4ff0c5... is not available, "
 
 print ("cold-fetch failures (must be retried):")
 check ("anvil's wrapper around the upstream error",
-       warmup.isColdFetchFailure (Exception (ANVIL_WRAPPER)), True)
+       warmup.isRetryable (Exception (ANVIL_WRAPPER)), True)
 check ("the bare upstream -32000 body",
-       warmup.isColdFetchFailure (Exception (UPSTREAM_BARE)), True)
+       warmup.isRetryable (Exception (UPSTREAM_BARE)), True)
 check ("a dict-shaped Web3RPCError payload",
-       warmup.isColdFetchFailure (
+       warmup.isRetryable (
          Exception ({"code": -32603, "message": ANVIL_WRAPPER})), True)
 check ("historical state pruned away",
-       warmup.isColdFetchFailure (Exception (PRUNED_STATE)), True)
+       warmup.isRetryable (Exception (PRUNED_STATE)), True)
+
+# VERBATIM from the 2026-08-20 outage.  anvil reports a fork that has not yet
+# built its block environment as JSON-RPC -32602 "invalid params", which is
+# indistinguishable by CODE from a genuinely malformed request -- so the message
+# is the only thing that can tell them apart, and that makes this file the place
+# the distinction lives.
+NOT_READY_WRAPPED = {"code": -32602, "message": "Excess blob gas not set."}
+NOT_READY_BARE = "Excess blob gas not set."
+
+print ("fork-not-ready failures (must be retried):")
+check ("the web3 dict payload the helper died on",
+       warmup.isRetryable (Exception (NOT_READY_WRAPPED)), True)
+check ("the bare message",
+       warmup.isRetryable (Exception (NOT_READY_BARE)), True)
 
 print ("everything else (must NOT be retried):")
 check ("a plain revert -- the EVM ran, so the state is already warm",
-       warmup.isColdFetchFailure (ContractLogicError ("execution reverted")), False)
+       warmup.isRetryable (ContractLogicError ("execution reverted")), False)
 check ("a named revert reason",
-       warmup.isColdFetchFailure (
+       warmup.isRetryable (
          ContractLogicError ("execution reverted: name already registered")), False)
 check ("a bad argument",
-       warmup.isColdFetchFailure (ValueError ("invalid address checksum")), False)
+       warmup.isRetryable (ValueError ("invalid address checksum")), False)
 
 # The deliberately awkward one. "is not found" is a broad marker, so a revert
 # whose reason happens to contain those words would be retried pointlessly for
@@ -90,7 +104,7 @@ check ("a bad argument",
 # COLD_FETCH_MARKERS if a real contract ever reverts with this wording.
 print ("known imprecision (documented, not a bug):")
 check ("a revert whose reason contains 'is not found' is retried",
-       warmup.isColdFetchFailure (ContractLogicError ("account is not found")), True)
+       warmup.isRetryable (ContractLogicError ("account is not found")), True)
 
 print ("withRetry control flow:")
 
@@ -111,6 +125,25 @@ import time
 ok, value = warmup.withRetry ("cold twice", coldTwiceThenFine, time.time () + 30)
 check ("retries a cold fetch until it succeeds", (ok, value), (True, "warm"))
 check ("and stops as soon as it does", attempts["n"], 3)
+
+notReady = {"n": 0}
+
+
+def notReadyThenFine ():
+  notReady["n"] += 1
+  if notReady["n"] < 4:
+    raise Exception (NOT_READY_WRAPPED)
+  return "executed"
+
+
+# The regression this file exists to prevent from recurring: before 2026-08-20
+# this raised on the FIRST attempt and the warm-up abandoned the target, having
+# spent 1.6s of a 180s budget, because -32602 was read as an authoritative "your
+# request is wrong" rather than "the fork is not up yet".
+ok, value = warmup.withRetry ("not ready thrice", notReadyThenFine,
+                              time.time () + 30)
+check ("waits out a fork that cannot execute yet", (ok, value), (True, "executed"))
+check ("and stops as soon as it can", notReady["n"], 4)
 
 nonRetryable = {"n": 0}
 
