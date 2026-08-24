@@ -27,11 +27,17 @@ fi
 # --state-interval also flushes it every N seconds, so even a hard SIGABRT/OOM
 # loses at most a few seconds (a 1-2 block rewind, which is a trivial in-window
 # reorg that xayax handles cleanly - NOT a beyond-pruning-depth abort).
-# --preserve-historical-states keeps per-block state so post-reload lookups at
-# historical block hashes still resolve. On this low-activity test chain the
-# snapshots are tiny; if the volume ever grows unreasonably, dropping that one
-# flag is the release valve (base --state still preserves the block/hash chain
-# that xayax needs).
+# --preserve-historical-states used to be passed here so post-reload lookups
+# at historical block hashes still resolve. Its "snapshots are tiny" premise
+# was wrong: at --block-time 5 it grew anvil by ~4 GB/hour of RAM and dump
+# size alike (measured 2026-08-24: 46 MiB -> 10.4 GiB RSS in 2.5 h), which
+# throttled the host until block cadence doubled and made the shutdown state
+# dump too large to finish inside any stop grace period -- a docker restart
+# then truncates anvil-state.json mid-write and the chain crash-loops.
+# Dropping it was the release valve that comment promised: base --state
+# still preserves the block/hash chain xayax needs, and nothing in this stack
+# queries *state* at historical blocks -- proven live by twice amputating
+# historical_states from a bloated snapshot and running on, healthy.
 #
 # NOTE: the snapshot pins the forked block. To change FORK_BLOCK_NUMBER (or to
 # start over from a clean fork) you must wipe the volume, e.g.
@@ -55,7 +61,6 @@ exec anvil \
   --block-time 5 \
   --state "${STATE_FILE}" \
   --state-interval 10 \
-  --preserve-historical-states \
   --retries 15 \
   --timeout 120000 \
   --fork-retry-backoff 2000
