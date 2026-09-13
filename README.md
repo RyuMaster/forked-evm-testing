@@ -78,3 +78,46 @@ methods:
   or the move represented as string already.
 - `syncgsp ()`: Waits for the internal GSP to be `up-to-date` and synced to
   the latest block of the base-chain node.
+
+## Mainnet stack (Taurion)
+
+Copy `.env.mainnet.example` to `.env.mainnet` and configure the Polygon mainnet
+node URL and optional API key. The key stays on this machine and is added by
+nginx to `/chain` requests; the phone never receives it. Load the local
+`tn-base:latest` GSP image before starting (the profile never pulls that image).
+Run the mainnet stack beside the anvil stack with its own project name:
+
+```sh
+docker compose -f docker-compose.mainnet.yml -p taurion-mainnet --env-file .env.mainnet up -d
+```
+
+This profile runs xayax, tauriond, the xayax healthcheck and nginx, with a separate
+GSP data volume. It exposes `/gsp` and `/chain` on port 8102 by default, with no
+basechain, helper or warmup service and no `/helper` endpoint.
+
+On the first run, the GSP starts at the fork's genesis (Polygon block 93.3 million)
+and replays every Taurion move since then. xayax reads `eth_getLogs` in 90-block
+ranges: expect a few thousand requests for the initial sync. A full node serves
+these logs; an archive node is not required.
+
+If the node offers no WebSocket, xayax logs a WebSocket connection failure once
+and continues by polling. An empty `BLOCKCHAIN_WS_ENDPOINT` uses
+`BLOCKCHAIN_ENDPOINT` for the connection attempt, matching the anvil profile's
+HTTP URL form. Look for the WebSocket connection-failure line in the xayax logs
+(the exact wording depends on the xayax image):
+
+```sh
+docker compose -f docker-compose.mainnet.yml -p taurion-mainnet --env-file .env.mainnet logs xayax
+```
+
+Check the GSP's `state` and `height` in the JSON-RPC result to follow its sync:
+
+```sh
+curl -s http://localhost:8102/gsp -d '{"jsonrpc":"2.0","id":1,"method":"getnullstate","params":[]}'
+```
+
+Check that `/chain` reports Polygon mainnet: the JSON-RPC `result` must be `0x89`.
+
+```sh
+curl -s http://localhost:8102/chain -d '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}'
+```
