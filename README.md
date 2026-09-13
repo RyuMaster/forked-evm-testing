@@ -101,8 +101,11 @@ ranges: expect a few thousand requests for the initial sync. A full node serves
 these logs; an archive node is not required.
 
 If the node offers no WebSocket, xayax logs a WebSocket connection failure once
-and continues by polling. An empty `BLOCKCHAIN_WS_ENDPOINT` uses
-`BLOCKCHAIN_ENDPOINT` for the connection attempt, matching the anvil profile's
+and continues by polling. xayax reads the chain through nginx's `/chain`, so a
+node key is configured once; `BLOCKCHAIN_WS_ENDPOINT` may still name the node's
+WebSocket directly (a keyed node will refuse it and xayax polls). An empty
+`BLOCKCHAIN_WS_ENDPOINT` uses
+`http://nginx/chain` for the connection attempt, matching the anvil profile's
 HTTP URL form. Look for the WebSocket connection-failure line in the xayax logs
 (the exact wording depends on the xayax image):
 

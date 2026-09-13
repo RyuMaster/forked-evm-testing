@@ -9,8 +9,8 @@ services:
       MAX_REORG_DEPTH: 1
     command: [
       "eth",
-      "--eth_rpc_url=${BLOCKCHAIN_ENDPOINT}",
-      "--eth_ws_url=${BLOCKCHAIN_WS_ENDPOINT:-${BLOCKCHAIN_ENDPOINT}}",
+      "--eth_rpc_url=http://nginx/chain",
+      "--eth_ws_url=${BLOCKCHAIN_WS_ENDPOINT:-http://nginx/chain}",
       "--accounts_contract=${ACCOUNTS_CONTRACT}",
       "--xayax_block_range=90",
       "--nolisten_locally",
@@ -19,6 +19,7 @@ services:
     ]
     stop_grace_period: 1s
     restart: unless-stopped
+    depends_on: [nginx]
 
   gsp:
     image: ${GSP_IMAGE}
