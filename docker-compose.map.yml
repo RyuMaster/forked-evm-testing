@@ -1,0 +1,14 @@
+# Taurion MAP HOST (native spec 2026-09-13-map-delivery §9.3): one static nginx serving the
+# terrain pyramid + manifest published by tools/scripts/publish_map.sh. Independent of both game
+# stacks by design -- the phone holds one fixed URL for the map, whatever server it plays on.
+#   docker compose -f docker-compose.map.yml -p taurion-map up -d
+services:
+  map:
+    image: nginx:stable-alpine
+    volumes:
+      - /home/ryumaster/taurion-map:/usr/share/nginx/html:ro
+      - ./nginx/map.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "${TAURION_MAP_PORT:-8103}:80"
+    stop_grace_period: 1s
+    restart: unless-stopped
