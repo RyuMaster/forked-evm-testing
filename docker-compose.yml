@@ -1,54 +1,58 @@
-# Runs a forked blockchain, connected Xaya X and an image with a utility
-# JSON-RPC server (e.g. for mining blocks on demand and sending moves
-# with impersonated addresses).
+# Taurion PRODUCTION: the game server following real Polygon mainnet.
+#
+# Runs as its own stack beside the anvil test stack (branch taurion_master). Only what is bound to
+# the real chain is started here:
+#
+#   xayax  - reads Polygon through this stack's nginx; the anvil stack's xayax cannot be reused,
+#            it indexes the fork.
+#   gsp    - tauriond, the SAME locally-loaded tn-base image the anvil stack runs (not rebuilt, not
+#            pulled), with its own state volume.
+#   nginx  - /gsp and /chain on port 8102 (the app's built-in PRODUCTION profile). /chain goes to the
+#            real node, not anvil, so the anvil stack's nginx cannot serve it.
+#
+# Not started here: basechain, helper, warmup, healthcheck containers. Nothing on mainnet mints,
+# impersonates or funds -- the phone's own wallet signs every transaction and pays for it.
+#
+# Every setting has a working default, so the stack deploys with no env file at all. Override any of
+# them in the Portainer stack env (or a .env file, see .env.example).
+#
+#   docker compose up -d      # project name comes from `name:` below
+
+name: taurion-production
 
 services:
-
-  basechain:
-    build:
-      context: ./basechain
-    environment:
-      ENDPOINT:  ${BLOCKCHAIN_ENDPOINT}
-      FORK_BLOCK_NUMBER: ${FORK_BLOCK_NUMBER}
-    volumes:
-      # Persists the forked chain across restarts so a crash/redeploy resumes
-      # the SAME blocks instead of re-forking fresh. Re-forking rewinds every
-      # locally-mined block to new hashes, which xayax+GSP (synced past the fork
-      # point) see as a reorg-beyond-pruning-depth and abort on. See
-      # basechain/entrypoint.sh for the full rationale.
-      - basechain_state:/state
-    # Auto-recover from an upstream-RPC panic/OOM instead of staying dead for
-    # hours. Safe now that state is persisted: the restarted node reloads the
-    # same chain rather than diverging from xayax/GSP.
-    restart: unless-stopped
-    # Give anvil time to flush a final state snapshot on graceful stop/redeploy
-    # (the periodic --state-interval flush already covers hard crashes).
-    stop_grace_period: 30s
 
   xayax:
     image: xaya/xayax
     environment:
-      # We don't really need reorgs at all in the test environment,
-      # so can set this to something very low.
-      MAX_REORG_DEPTH: 1
+      # A real chain reorgs. The entrypoint passes this as --max_reorg_depth.
+      MAX_REORG_DEPTH: 1000
     command: [
       "eth",
       "--eth_rpc_url=http://nginx/chain",
-      "--eth_ws_url=http://nginx/chain",
-      "--accounts_contract=${ACCOUNTS_CONTRACT}",
+      "--eth_ws_url=${BLOCKCHAIN_WS_ENDPOINT:-http://nginx/chain}",
+      "--accounts_contract=${ACCOUNTS_CONTRACT:-0x8C12253F71091b9582908C8a44F78870Ec6F304F}",
       "--xayax_block_range=90",
       "--nolisten_locally",
-      "--alsologtostderr",
-      "--max_reorg_depth=1000"
+      "--alsologtostderr"
     ]
-    stop_grace_period: 1s
-    restart: on-failure
-    depends_on:
-      healthcheck_chain:
-        condition: service_healthy
+    volumes:
+      # Its block cache survives a recreate, so a redeploy does not refetch the reorg window.
+      - xayaxdata:/xayax
+    # No separate healthcheck container: the image has bash, and an open JSON-RPC port is what the
+    # GSP needs before it starts.
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8000"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    stop_grace_period: 5s
+    restart: unless-stopped
+    depends_on: [nginx]
 
   gsp:
-    image: ${GSP_IMAGE}
+    image: ${GSP_IMAGE:-tn-base:latest}
     # tn-base:latest is a locally-loaded image (not in a registry); never try to pull it.
     pull_policy: never
     command: [
@@ -59,103 +63,37 @@ services:
       "--nogame_rpc_listen_locally",
       "--datadir=/xayagame",
       "--xaya_connection_check_ms=10000",
-      "--xaya_zmq_staleness_ms=10000",
+      # 30 s, not the 10 s default: the first start syncs every block since the game's Polygon
+      # genesis (93,300,000), and 10 s of ZMQ silence during that catch-up kills tauriond
+      # (mainloop.cpp:26 Check failed: !IsRunning()).
+      "--xaya_zmq_staleness_ms=30000",
       "--alsologtostderr",
     ]
     volumes:
       - gspdata:/xayagame
-    stop_grace_period: 1s
-    depends_on:
-      healthcheck_xayax:
-        condition: service_healthy
-
-  # One-shot step that pulls the accounts / policy / WCHI / name-receiver state
-  # into anvil's forked-state cache before anything asks for it in anger.
-  #
-  # A fresh stack has an empty cache, and the upstream RPC pool answers a
-  # sizeable fraction of COLD account fetches with a JSON-RPC error rather than
-  # an empty account -- which anvil, correctly, treats as an authoritative
-  # answer rather than something to retry. The first thing to touch such an
-  # address is then what fails, and that used to be a player pressing "Create".
-  # See helper/warmup.py for the measurements and for why raising anvil's
-  # --retries is not the fix.
-  #
-  # Shares the helper image because it needs exactly what the helper needs (web3
-  # plus the contract ABIs). Read-only, so re-running it is always safe:
-  #   docker compose run --rm warmup
-  warmup:
-    build:
-      context: ./helper
-    entrypoint: ["python3", "/usr/local/bin/warmup.py"]
-    environment:
-      ACCOUNTS_CONTRACT: ${ACCOUNTS_CONTRACT}
-      WARMUP_BUDGET_SECONDS: ${WARMUP_BUDGET_SECONDS:-180}
-      WARMUP_EXTRA_ADDRESSES: ${WARMUP_EXTRA_ADDRESSES:-0x1234567890123456789012345678901234567890}
-    # A step, not a service: it must run once to completion, never be restarted.
-    restart: "no"
-    stop_grace_period: 1s
-    depends_on:
-      healthcheck_chain:
-        condition: service_healthy
-
-  helper:
-    build:
-      context: ./helper
-    environment:
-      ACCOUNTS_CONTRACT: ${ACCOUNTS_CONTRACT}
-    stop_grace_period: 1s
-    # This was the only long-running service in the stack without one, and the
-    # omission is what turned a transient boot race into an outage: the server
-    # resolves wchiToken() at import, so anything that upsets that one call
-    # kills the process, and compose's default `no` then left the entire write
-    # path -- registration, moves, admin -- dead until a human noticed and ran
-    # `docker start`.  The warm-up below is what PREVENTS the race; this is the
-    # net under it, because a restart re-runs exactly the resolution that
-    # failed and the next attempt is seconds later.
+    stop_grace_period: 10s
     restart: unless-stopped
     depends_on:
-      # Deliberately the warm-up rather than healthcheck_chain. That healthcheck
-      # only proves anvil answers eth_chainId, which it does from memory as soon
-      # as it binds -- before the fork can serve state. This server resolves
-      # wchiToken() at import time and has died in exactly that gap. Waiting for
-      # the warm-up to COMPLETE closes the window, and warms the registration
-      # path on the way through.
-      warmup:
-        condition: service_completed_successfully
+      xayax:
+        condition: service_healthy
 
   nginx:
     build:
       context: ./nginx
+      dockerfile: Dockerfile.mainnet
+    environment:
+      # Polygon mainnet JSON-RPC. A full node is enough (xayax reads blocks and logs; the phone
+      # reads balances, fees and receipts at the tip). Both defaults answered keyless on 2026-09-16;
+      # https://polygon.drpc.org is the fallback.
+      BLOCKCHAIN_ENDPOINT: ${BLOCKCHAIN_ENDPOINT:-https://polygon-node.xaya.io}
+      # Optional X-goog-api-key for the node. Added by nginx only; xayax and the phone never see it.
+      BLOCKCHAIN_API_KEY: ${BLOCKCHAIN_API_KEY:-}
     ports:
-      # Host port is configurable so this stack can run alongside the Soccerverse
-      # stack (which already publishes 8100). Defaults to 8101.
-      - "${TAURION_NGINX_PORT:-8101}:80"
+      - "${TAURION_PRODUCTION_PORT:-8102}:80"
     stop_grace_period: 1s
-
-  healthcheck_chain:
-    build:
-      context: ./healthcheck
-    stop_grace_period: 1s
-    healthcheck:
-      test: ["CMD", "/usr/local/bin/basechain.py"]
-      interval: 1s
-      timeout: 5s
-      retries: 10
-
-  healthcheck_xayax:
-    build:
-      context: ./healthcheck
-    stop_grace_period: 1s
-    healthcheck:
-      test: ["CMD", "/usr/local/bin/xayax.py"]
-      interval: 1s
-      timeout: 5s
-      retries: 10
+    restart: unless-stopped
 
 volumes:
-  # Persists the Taurion GSP (tauriond) SQLite state across restarts/redeploys.
+  # tauriond's SQLite state. Wiping it means re-syncing from the Polygon genesis block.
   gspdata:
-  # Anvil's forked-chain state snapshot. Survives `docker compose down` and
-  # redeploys; wipe it (`docker volume rm <stack>_basechain_state`) to start
-  # from a clean fork or after changing FORK_BLOCK_NUMBER.
-  basechain_state:
+  xayaxdata:

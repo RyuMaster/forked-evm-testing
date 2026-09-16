@@ -1,3 +1,21 @@
+# Taurion PRODUCTION stack (branch `taurion_master_production`)
+
+This branch's `docker-compose.yml` runs Taurion against **real Polygon mainnet**, as its own stack
+beside the anvil test stack (branch `taurion_master`, port 8101):
+
+- `xayax` reads Polygon through this stack's nginx.
+- `gsp` is `tauriond` from the same locally-loaded `tn-base:latest` image the anvil stack runs.
+- `nginx` serves `/gsp` and `/chain` on **port 8102**, the app's built-in PRODUCTION server.
+
+There is no basechain, helper, warmup or healthcheck container. Every setting has a default, so it
+deploys with no env file; see `.env.example` to override the RPC endpoint, key, image or port.
+
+First start: the GSP syncs every Polygon block since the game's genesis (block 93,300,000) before
+`/gsp` `getnullstate` reads `up-to-date`. Its state lives in the `gspdata` volume; wiping that
+volume means syncing from genesis again.
+
+The rest of this README describes the anvil test stack on `taurion_master`.
+
 # Fork-Network Testing for Xaya
 
 This repository provides a Docker Compose configuration that allows
