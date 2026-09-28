@@ -17,6 +17,14 @@ services:
       # point) see as a reorg-beyond-pruning-depth and abort on. See
       # basechain/entrypoint.sh for the full rationale.
       - basechain_state:/state
+    # Resolve the fork upstream through public DNS.  The laptop's ISP resolver
+    # (O2 Czech) answers polygon.drpc.org with its own block page (a *.o2.cz
+    # certificate), so every pre-fork read failed with "certificate not valid
+    # for name" -- invisible until a GSP had to resync from genesis
+    # (2026-09-28).  anvil only needs the upstream, never another container.
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     # Auto-recover from an upstream-RPC panic/OOM instead of staying dead for
     # hours. Safe now that state is persisted: the restarted node reloads the
     # same chain rather than diverging from xayax/GSP.
