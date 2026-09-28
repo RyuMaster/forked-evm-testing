@@ -123,6 +123,23 @@ services:
       warmup:
         condition: service_completed_successfully
 
+  # Read-scaling fanout (taurionui fanout/, unmodified, pinned): ONE reader on the GSP,
+  # pushed to every client over SSE, plus the per-block Move-log lookup against OUR anvil
+  # (its default POLYGON_RPC is a public Polygon node, which has none of our fork's blocks).
+  # Build the image first: fanout/build-image.sh (on the laptop).
+  fanout:
+    image: tn-fanout:e8f45c6
+    pull_policy: never
+    command: ["node", "fanout/server.mjs"]
+    environment:
+      GSP_RPC: http://gsp:8600
+      POLYGON_RPC: http://basechain:8545
+      FEED_PORT: "8090"
+      FEED_ORIGIN: "*"
+    restart: on-failure:10
+    depends_on:
+      - gsp
+
   nginx:
     build:
       context: ./nginx
