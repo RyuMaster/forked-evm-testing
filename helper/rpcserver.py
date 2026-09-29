@@ -202,7 +202,12 @@ def sendmove (ns, name, mv):
 
     result["txHash"] = tx.hex () if hasattr (tx, 'hex') else str (tx)
 
-    mineblock ()
+    # NO mineblock () here: the move rides anvil's regular --block-time block,
+    # as a move on the real chain rides the next block. Mining one on demand
+    # put the move in an extra block a second or less from a regular one; the
+    # fanout's per-block pull then usually skipped that block, so it never read
+    # the move's same-block route and the client's confirmed playback drew the
+    # unit's first turn as a jump (2026-09-29). syncgsp waits for the pool.
 
     result["success"] = True
     result["message"] = "Move submitted successfully"
@@ -421,6 +426,16 @@ def syncgsp ():
 
   try:
     startTime = time.time ()
+    maxWait = 30  # Maximum wait time in seconds
+
+    # sendmove no longer mines, so a move sent just before this call may still
+    # be pending: wait for anvil's next regular block to take it first, or the
+    # GSP would be "synced" to a block without it.
+    while int (eth.txpool_status ()["pending"], 16) > 0:
+      if time.time () - startTime > maxWait:
+        result["error"] = "Timeout waiting for pending transactions to be mined"
+        return result
+      time.sleep (0.2)
 
     blk = w3.eth.get_block ("latest")["hash"].hex ()
     if blk[:2] == "0x":
@@ -429,7 +444,6 @@ def syncgsp ():
 
     result["targetBlock"] = blk
 
-    maxWait = 30  # Maximum wait time in seconds
     while True:
       state = gsp.getnullstate ()
       if state["state"] == "up-to-date" and state["blockhash"] == blk:

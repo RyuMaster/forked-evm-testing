@@ -115,6 +115,8 @@ except:
 tokenId = accounts.functions.tokenIdForName ("p", "domob").call ()
 oldNonce = accounts.functions.nextNonce (tokenId).call ()
 helper.sendmove ("p", "domob", "{}")
+# sendmove leaves the move to anvil's regular block; syncgsp waits for it.
+helper.syncgsp ()
 assert ownerOfName ("p", "domob") == oldOwner
 newNonce = accounts.functions.nextNonce (tokenId).call ()
 assert newNonce == oldNonce + 1
