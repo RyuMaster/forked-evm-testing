@@ -45,6 +45,14 @@ services:
       "--eth_ws_url=http://nginx/chain",
       "--accounts_contract=${ACCOUNTS_CONTRACT}",
       "--xayax_block_range=90",
+      # The websocket new-heads subscription does not come back after the
+      # socket drops (seen 2026-09-28 when nginx was recreated: "handle_read_frame
+      # error ... End of File", never resubscribed). The forced sync then runs on
+      # its 5000 ms default, which beats against anvil's --block-time 5: every few
+      # minutes one poll sees no block and the next sees two, the GSP applies both
+      # at once, and the fanout never publishes the first -- the client's playback
+      # resets and units jump. A 1 s forced sync cannot merge two blocks 5 s apart.
+      "--xayax_update_timeout_ms=1000",
       "--nolisten_locally",
       "--alsologtostderr",
       "--max_reorg_depth=1000"
