@@ -50,9 +50,12 @@ cid=$(rpc /chain '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}' |
   && pass "batch with one refused method refused whole" || fail "batch with one refused method refused whole"
 [ "$(rpc /gsp 'not json' | err_code)" = -32700 ] && pass "garbage -> -32700" || fail "garbage -> -32700"
 
-# 4. a large answer arrives whole through the gate
+# 4. large answers arrive whole through the gate (getbuildings is ~330 KB: far past nginx's default
+#    one-page subrequest buffer, which getbootstrapdata at ~1.3 KB never exercised)
 rpc /gsp '{"jsonrpc":"2.0","id":6,"method":"getbootstrapdata","params":[]}' | has_result \
   && pass "getbootstrapdata whole" || fail "getbootstrapdata whole"
+rpc /gsp '{"jsonrpc":"2.0","id":9,"method":"getbuildings","params":[]}' | has_result \
+  && pass "getbuildings (~330 KB) whole" || fail "getbuildings (~330 KB) whole"
 
 # 5. helper (anvil only): an arity error is the "alive" answer the app's probe expects
 if [ "$KIND" = test ]; then
