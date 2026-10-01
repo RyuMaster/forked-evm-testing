@@ -164,6 +164,10 @@ services:
       # stack (which already publishes 8100). Defaults to 8101.
       - "${TAURION_NGINX_PORT:-8101}:80"
     stop_grace_period: 1s
+    environment:
+      # The Play test's app key (native spec 2026-10-01 §3.2); stack.env, never committed.
+      TAURION_APP_KEY: ${TAURION_APP_KEY:?TAURION_APP_KEY must be set in stack.env}
+    restart: unless-stopped
 
   healthcheck_chain:
     build:

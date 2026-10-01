@@ -1,0 +1,109 @@
+# We want the server to start immediately, even if the upstream hosts
+# are not yet all available.  This is required to resolve / simplify
+# start-up dependencies, e.g. we want Xaya X to connect to the basechain
+# via nginx so we can control some things such as the Content-Type header,
+# but we need Xaya X to be up already before we can start the GSP.
+#
+# To implement this, we follow the trick described here:
+# https://sandro-keil.de/blog/let-nginx-start-if-upstream-host-is-unavailable-or-down/
+#
+# This is an envsubst template (the image's /etc/nginx/templates): ${TAURION_APP_KEY} is filled in at
+# start. nginx's own $variables are left alone (envsubst only replaces names set in the environment).
+
+js_path "/etc/nginx/njs/";
+js_import rpc from rpc_allow.js;
+
+# TUNNEL GATE (native spec 2026-10-01-play-internal-test §3.2). Cloudflare adds CF-Connecting-IP to every
+# request that comes through the tunnel; LAN callers and the stack's own services (xayax and the helper
+# read /chain and /gsp through this nginx) never carry it and keep today's behaviour exactly.
+# 04-require-key.sh refuses to start with an empty or short key, so the "1|" entry can never match a
+# request without a key.
+# The key entry ("1|" + 64 hex chars) is longer than the default 64-byte map bucket.
+map_hash_bucket_size 128;
+map $http_cf_connecting_ip $via_tunnel { "" 0; default 1; }
+map "$via_tunnel|$http_x_taurion_key" $tunnel_denied {
+  default 1;
+  "~^0\|" 0;
+  "1|${TAURION_APP_KEY}" 0;
+}
+# The fanout caps streams per client IP; behind the tunnel every tester arrives from the connector.
+map $http_cf_connecting_ip $client_ip { "" $remote_addr; default $http_cf_connecting_ip; }
+
+server {
+
+  listen 80 default_server;
+
+  resolver 127.0.0.11 valid=1s;
+
+  if ($tunnel_denied) { return 403; }
+
+  location /chain {
+    if ($via_tunnel) { rewrite ^ /_tunnel/chain last; }
+    set $upstream http://basechain:8545/;
+
+    proxy_pass $upstream;
+    proxy_http_version 1.1;
+    proxy_set_header Content-Type application/json;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+  }
+
+  location /gsp {
+    if ($via_tunnel) { rewrite ^ /_tunnel/gsp last; }
+    set $upstream http://gsp:8600/;
+
+    proxy_pass $upstream;
+    proxy_set_header Content-Type application/json;
+  }
+
+  location /helper {
+    if ($via_tunnel) { rewrite ^ /_tunnel/helper last; }
+    set $upstream http://helper:8000/;
+
+    proxy_pass $upstream;
+    proxy_set_header Content-Type application/json;
+  }
+
+  location /feed/ {
+    set $upstream http://fanout:8090;
+
+    rewrite ^/feed/(.*)$ /$1 break;
+    proxy_pass $upstream;
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    proxy_set_header X-Forwarded-For $client_ip;
+    proxy_buffering off;
+    proxy_cache off;
+    proxy_read_timeout 1h;
+  }
+
+  # Tunnel traffic for the JSON-RPC routes: rpc_allow.js checks every method, then forwards to /_up/*.
+  location = /_tunnel/chain  { internal; include /etc/nginx/rpc_body.conf; js_content rpc.chainTest; }
+  location = /_tunnel/gsp    { internal; include /etc/nginx/rpc_body.conf; js_content rpc.gsp; }
+  location = /_tunnel/helper { internal; include /etc/nginx/rpc_body.conf; js_content rpc.helper; }
+
+  location = /_up/chain {
+    internal;
+    set $upstream http://basechain:8545/;
+    proxy_pass $upstream;
+    proxy_http_version 1.1;
+    proxy_set_header Content-Type application/json;
+  }
+
+  location = /_up/gsp {
+    internal;
+    set $upstream http://gsp:8600/;
+    proxy_pass $upstream;
+    proxy_set_header Content-Type application/json;
+  }
+
+  location = /_up/helper {
+    internal;
+    # sendmove + syncgsp legitimately run for tens of seconds (net/RpcTransport.kt SUBMIT_TIMEOUT_SECONDS).
+    proxy_read_timeout 120s;
+    set $upstream http://helper:8000/;
+    proxy_pass $upstream;
+    proxy_set_header Content-Type application/json;
+  }
+
+}
