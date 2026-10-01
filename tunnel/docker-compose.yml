@@ -1,0 +1,12 @@
+# Cloudflare named tunnel `taurion-laptop` (native spec 2026-10-01-play-internal-test §3.1). Routes are set in
+# the Cloudflare dashboard: anvil.taurion.io -> http://localhost:8101, mainnet.taurion.io ->
+# http://localhost:8102 -- hence host networking. The token stays in a laptop file, never in git:
+#   TUNNEL_ENV_FILE=$HOME/taurion-tunnel/.env docker compose -p taurion-tunnel -f tunnel/docker-compose.yml up -d
+# Start it only while both stacks' nginx tunnel gate passes (test/tunnel-gate.sh).
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:2026.9.3
+    command: tunnel --no-autoupdate --metrics 127.0.0.1:20241 run
+    env_file: ${TUNNEL_ENV_FILE:?path to the file holding TUNNEL_TOKEN}
+    network_mode: host
+    restart: unless-stopped
