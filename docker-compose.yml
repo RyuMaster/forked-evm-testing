@@ -88,10 +88,29 @@ services:
       BLOCKCHAIN_ENDPOINT: ${BLOCKCHAIN_ENDPOINT:-https://polygon-node.xaya.io}
       # Optional X-goog-api-key for the node. Added by nginx only; xayax and the phone never see it.
       BLOCKCHAIN_API_KEY: ${BLOCKCHAIN_API_KEY:-}
+      # The Play test's app key (native spec 2026-10-01 §3.2); stack.env, never committed.
+      TAURION_APP_KEY: ${TAURION_APP_KEY:?TAURION_APP_KEY must be set in stack.env}
     ports:
       - "${TAURION_PRODUCTION_PORT:-8102}:80"
     stop_grace_period: 1s
     restart: unless-stopped
+
+  # Read-scaling fanout (native spec 2026-10-01 §3.3), the anvil stack's service: taurionui fanout/
+  # e8f45c6, unmodified. ONE reader on the GSP, pushed to every client over SSE; its per-block Move-log
+  # lookup reads OUR node through nginx (in-stack, so the tunnel gate does not apply). The image is
+  # built on the laptop by the anvil branch's fanout/build-image.sh.
+  fanout:
+    image: tn-fanout:e8f45c6
+    pull_policy: never
+    command: ["node", "fanout/server.mjs"]
+    environment:
+      GSP_RPC: http://gsp:8600
+      POLYGON_RPC: http://nginx/chain
+      FEED_PORT: "8090"
+      FEED_ORIGIN: "*"
+    restart: on-failure:10
+    depends_on:
+      - gsp
 
 volumes:
   # tauriond's SQLite state. Wiping it means re-syncing from the Polygon genesis block.
