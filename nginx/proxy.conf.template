@@ -37,6 +37,11 @@ server {
 
   if ($tunnel_denied) { return 403; }
 
+  # The njs gate's upstream answers come back as in-memory subrequests to /_up/*, and nginx sizes that
+  # buffer from the SUBREQUEST's location -- at the default one page, getbuildings (~330 KB, measured
+  # 2026-10-01) failed "too big subrequest response". Server level, so every /_up/* inherits it.
+  subrequest_output_buffer_size 8m;
+
   location /chain {
     if ($via_tunnel) { rewrite ^ /_tunnel/chain last; }
     set $upstream http://basechain:8545/;
